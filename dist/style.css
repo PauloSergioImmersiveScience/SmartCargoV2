@@ -156,8 +156,6 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .dialog-button { padding: 11px 18px; border: 1px solid #94a3b8; border-radius: 10px; cursor: pointer; }
 .cancel-button { background: #fff; }
 .confirm-button { background: #b91c1c; border-color: #b91c1c; color: #fff; }
-.ok-button { background: #166534; border-color: #166534; color: #fff; }
-.save-dialog strong { overflow-wrap: anywhere; }
 
 @media (max-width: 760px) {
   .app-shell { padding: 16px 14px 24px; }

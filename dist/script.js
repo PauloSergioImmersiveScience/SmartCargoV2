@@ -12,9 +12,7 @@ const elements = {
   xrayPlaceholder: document.querySelector("#xrayPlaceholder"),
   hemdCanvas: document.querySelector("#hemdCanvas"),
   hemdPlaceholder: document.querySelector("#hemdPlaceholder"),
-  dialog: document.querySelector("#confirmDialog"),
-  saveDialog: document.querySelector("#saveDialog"),
-  saveLocation: document.querySelector("#saveLocation")
+  dialog: document.querySelector("#confirmDialog")
 };
 
 const ctx = elements.xrayCanvas.getContext("2d", { willReadFrequently: true });
@@ -379,8 +377,7 @@ elements.report.addEventListener("click", async () => {
     await writable.close();
     const savedLocation = `${state.rootHandle.name}/Relatorios/Relatorio${index}.txt`;
     setStatus(`Relatorio${index}.txt salvo na pasta Relatorios.`, "success");
-    elements.saveLocation.textContent = savedLocation;
-    elements.saveDialog.showModal();
+    window.alert(`Relatório Salvo em ${savedLocation}`);
   } catch (error) {
     setStatus(`Não foi possível salvar o relatório: ${error.message}`, "error");
   }
