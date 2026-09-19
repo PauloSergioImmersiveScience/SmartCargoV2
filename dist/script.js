@@ -10,14 +10,16 @@ const elements = {
   currentItem: document.querySelector("#currentItem"),
   xrayCanvas: document.querySelector("#xrayCanvas"),
   xrayPlaceholder: document.querySelector("#xrayPlaceholder"),
-  hemdImage: document.querySelector("#hemdImage"),
+  hemdCanvas: document.querySelector("#hemdCanvas"),
   hemdPlaceholder: document.querySelector("#hemdPlaceholder"),
   dialog: document.querySelector("#confirmDialog")
 };
 
 const ctx = elements.xrayCanvas.getContext("2d", { willReadFrequently: true });
+const hemdCtx = elements.hemdCanvas.getContext("2d");
 const originalCanvas = document.createElement("canvas");
 const originalCtx = originalCanvas.getContext("2d", { willReadFrequently: true });
+const hemdOriginalImage = new Image();
 
 const state = {
   rootHandle: null,
@@ -144,7 +146,7 @@ async function loadItem(position, restored = null) {
   const xrayImage = new Image();
   await Promise.all([
     loadImage(state.xrayUrl, xrayImage),
-    loadImage(state.hemdUrl, elements.hemdImage)
+    loadImage(state.hemdUrl, hemdOriginalImage)
   ]);
 
   originalCanvas.width = xrayImage.naturalWidth;
@@ -152,6 +154,8 @@ async function loadItem(position, restored = null) {
   originalCtx.drawImage(xrayImage, 0, 0);
   elements.xrayCanvas.width = xrayImage.naturalWidth;
   elements.xrayCanvas.height = xrayImage.naturalHeight;
+  elements.hemdCanvas.width = hemdOriginalImage.naturalWidth;
+  elements.hemdCanvas.height = hemdOriginalImage.naturalHeight;
 
   state.currentPosition = position;
   state.boxes = restored ? restored.boxes.map(box => ({ ...box })) : [];
@@ -161,7 +165,7 @@ async function loadItem(position, restored = null) {
 
   elements.xrayCanvas.style.display = "block";
   elements.xrayPlaceholder.hidden = true;
-  elements.hemdImage.hidden = false;
+  elements.hemdCanvas.style.display = "block";
   elements.hemdPlaceholder.hidden = true;
   redrawXray();
   updateControls();
@@ -210,6 +214,37 @@ function redrawXray() {
     ctx.fillText(`BB ${i + 1}`, box.x + 5, Math.max(20, box.y - 7));
   });
   ctx.restore();
+  redrawHemd();
+}
+
+function redrawHemd() {
+  if (state.currentPosition < 0) return;
+  const hemdWidth = elements.hemdCanvas.width;
+  const hemdHeight = elements.hemdCanvas.height;
+  const xrayWidth = elements.xrayCanvas.width;
+  const xrayHeight = elements.xrayCanvas.height;
+  if (!hemdWidth || !hemdHeight || !xrayWidth || !xrayHeight) return;
+
+  hemdCtx.clearRect(0, 0, hemdWidth, hemdHeight);
+  hemdCtx.drawImage(hemdOriginalImage, 0, 0, hemdWidth, hemdHeight);
+
+  const boxesToDraw = state.draftBox ? [...state.boxes, state.draftBox] : state.boxes;
+  const scaleX = hemdWidth / xrayWidth;
+  const scaleY = hemdHeight / xrayHeight;
+  hemdCtx.save();
+  hemdCtx.lineWidth = Math.max(2, hemdWidth / 500);
+  hemdCtx.font = `bold ${Math.max(15, hemdWidth / 55)}px Segoe UI`;
+  boxesToDraw.forEach((box, i) => {
+    const x = box.x * scaleX;
+    const y = box.y * scaleY;
+    const width = box.width * scaleX;
+    const height = box.height * scaleY;
+    hemdCtx.strokeStyle = state.draftBox && i === boxesToDraw.length - 1 ? "#facc15" : "#ef4444";
+    hemdCtx.strokeRect(x, y, width, height);
+    hemdCtx.fillStyle = hemdCtx.strokeStyle;
+    hemdCtx.fillText(`BB ${i + 1}`, x + 5, Math.max(20, y - 7));
+  });
+  hemdCtx.restore();
 }
 
 function pointerPosition(event) {
@@ -355,10 +390,10 @@ function clearDisplayedState(clearFolder = true) {
     state.items = [];
   }
   ctx.clearRect(0, 0, elements.xrayCanvas.width, elements.xrayCanvas.height);
+  hemdCtx.clearRect(0, 0, elements.hemdCanvas.width, elements.hemdCanvas.height);
   elements.xrayCanvas.style.display = "none";
   elements.xrayPlaceholder.hidden = false;
-  elements.hemdImage.hidden = true;
-  elements.hemdImage.removeAttribute("src");
+  elements.hemdCanvas.style.display = "none";
   elements.hemdPlaceholder.hidden = false;
   elements.reportText.value = "";
   updateControls();
