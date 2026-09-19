@@ -1,6 +1,6 @@
 # SmartScanCargo
 
-Interface web para leitura sequencial de imagens de raio X e HEMD, criação de bounding boxes com equalização de histograma e gravação dos relatórios diretamente na pasta selecionada.
+Interface web para leitura sequencial de imagens de raio X e HEMD, criação de bounding boxes na imagem de raio X, reprodução proporcional automática das caixas na imagem HEMD, equalização de histograma no raio X e gravação dos relatórios diretamente na pasta selecionada.
 
 ## Navegadores compatíveis
 
