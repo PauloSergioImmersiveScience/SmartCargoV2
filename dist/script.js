@@ -12,7 +12,9 @@ const elements = {
   xrayPlaceholder: document.querySelector("#xrayPlaceholder"),
   hemdCanvas: document.querySelector("#hemdCanvas"),
   hemdPlaceholder: document.querySelector("#hemdPlaceholder"),
-  dialog: document.querySelector("#confirmDialog")
+  dialog: document.querySelector("#confirmDialog"),
+  saveDialog: document.querySelector("#saveDialog"),
+  saveLocation: document.querySelector("#saveLocation")
 };
 
 const ctx = elements.xrayCanvas.getContext("2d", { willReadFrequently: true });
@@ -287,8 +289,6 @@ elements.xrayCanvas.addEventListener("pointerup", event => {
   }
   pushHistory();
   state.boxes.push(box);
-  const prefix = elements.reportText.value.trimEnd();
-  elements.reportText.value = `${prefix}\n<${box.x},${box.y},${box.width},${box.height}>`;
   redrawXray();
   updateControls();
   setStatus(`Bounding box ${state.boxes.length} criada e equalizada.`, "success");
@@ -367,10 +367,20 @@ elements.report.addEventListener("click", async () => {
     const reportsDirectory = await state.rootHandle.getDirectoryHandle("Relatorios", { create: true });
     const index = state.items[state.currentPosition].index;
     const reportHandle = await reportsDirectory.getFileHandle(`Relatorio${index}.txt`, { create: true });
+    const boundingBoxes = state.boxes
+      .map(box => `<${box.x},${box.y},${box.width},${box.height}>`)
+      .join("\n");
+    const visibleReport = elements.reportText.value.trimEnd();
+    const savedReport = boundingBoxes
+      ? `${visibleReport}\n${boundingBoxes}`
+      : visibleReport;
     const writable = await reportHandle.createWritable();
-    await writable.write(elements.reportText.value);
+    await writable.write(savedReport);
     await writable.close();
+    const savedLocation = `${state.rootHandle.name}/Relatorios/Relatorio${index}.txt`;
     setStatus(`Relatorio${index}.txt salvo na pasta Relatorios.`, "success");
+    elements.saveLocation.textContent = savedLocation;
+    elements.saveDialog.showModal();
   } catch (error) {
     setStatus(`Não foi possível salvar o relatório: ${error.message}`, "error");
   }
