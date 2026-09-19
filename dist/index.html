@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interface SmartScanCargo para análise de imagens de raio X e HEMD.">
+  <title>SmartScanCargo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="brand-row">
+      <img src="assets/logo-smartscargo.jpeg" alt="SmartScanCargo - Intelligent Vision for Logistics" class="logo">
+      <div id="status" class="status" role="status" aria-live="polite">Selecione a pasta principal para começar.</div>
+    </header>
+
+    <section class="toolbar" aria-label="Controles principais">
+      <button id="uploadButton" class="action-button" type="button">Upload Image</button>
+      <button id="undoButton" class="action-button" type="button" disabled>Passo Anterior</button>
+      <button id="resetButton" class="action-button" type="button">Restaurar Início</button>
+    </section>
+
+    <section class="image-section">
+      <h1>Raio-X Image</h1>
+      <div id="xrayPanel" class="image-panel xray-panel">
+        <canvas id="xrayCanvas" aria-label="Imagem de raio X. Arraste para criar uma bounding box."></canvas>
+        <p id="xrayPlaceholder" class="placeholder">Nenhuma imagem carregada</p>
+      </div>
+      <p class="interaction-hint">Na imagem de raio X, clique e arraste para criar uma bounding box.</p>
+    </section>
+
+    <section class="image-section">
+      <h2>Hemd Image</h2>
+      <div id="hemdPanel" class="image-panel">
+        <img id="hemdImage" alt="Imagem HEMD carregada" hidden>
+        <p id="hemdPlaceholder" class="placeholder">Nenhuma imagem carregada</p>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <label for="reportText">Alterar Relatório</label>
+      <textarea id="reportText" spellcheck="true" disabled placeholder="As informações da carga aparecerão aqui."></textarea>
+    </section>
+
+    <footer class="footer-actions">
+      <button class="secondary-button" type="button" disabled title="Disponível em uma versão futura">Configuração</button>
+      <button id="reportButton" class="secondary-button" type="button" disabled>Gerar Relatório</button>
+      <span id="currentItem" class="current-item">Nenhuma carga selecionada</span>
+    </footer>
+  </main>
+
+  <dialog id="confirmDialog" class="confirm-dialog">
+    <form method="dialog">
+      <h2>Restaurar início</h2>
+      <p>Tem certeza que deseja retornar tudo para o estado inicial?</p>
+      <div class="dialog-actions">
+        <button value="cancel" class="dialog-button cancel-button">Cancelar</button>
+        <button value="confirm" class="dialog-button confirm-button">Restaurar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="script.js"></script>
+</body>
+</html>
