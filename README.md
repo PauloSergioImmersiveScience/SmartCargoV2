@@ -2,6 +2,8 @@
 
 Interface web para leitura sequencial de imagens de raio X e HEMD, criação de bounding boxes na imagem de raio X, reprodução proporcional automática das caixas na imagem HEMD, equalização de histograma no raio X e gravação dos relatórios diretamente na pasta selecionada.
 
+As coordenadas das bounding boxes não são exibidas no campo de edição do relatório. Elas são acrescentadas somente ao arquivo `Relatorio<índice>.txt` no momento da gravação. Após salvar, a interface mostra uma caixa de aviso nativa do navegador com o local do arquivo gerado. Os arquivos CSS e JavaScript usam identificação de versão para impedir que o navegador mantenha a implementação anterior em cache.
+
 ## Navegadores compatíveis
 
 Use uma versão atual do Google Chrome ou Microsoft Edge. A aplicação utiliza a File System Access API para ler e gravar na pasta escolhida pelo usuário.
