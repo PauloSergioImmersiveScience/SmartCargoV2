@@ -22,6 +22,50 @@ body {
 
 button, textarea { font: inherit; }
 
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: #111827;
+}
+
+.login-card {
+  width: min(495px, 100%);
+  padding: 38px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 32%);
+}
+
+.login-logo { width: 100%; height: auto; display: block; }
+.login-subtitle { margin: 16px 0 28px; color: #475569; font-size: 1.15rem; }
+.login-card label { display: block; margin-bottom: 7px; font-weight: 700; }
+.login-card input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 7px;
+  font: inherit;
+}
+.login-card input:focus { border-color: #2563eb; outline: 2px solid rgb(37 99 235 / 25%); }
+.login-error { min-height: 20px; margin: 7px 0 5px; color: #b91c1c; font-size: .9rem; }
+.login-button {
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 7px;
+  background: #2875e8;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.login-button:hover { background: #1d4ed8; }
+
 .app-shell {
   width: min(1180px, 100%);
   min-height: 100vh;
@@ -80,7 +124,7 @@ button, textarea { font: inherit; }
   transform: translateY(-1px);
 }
 
-button:focus-visible, textarea:focus-visible {
+button:focus-visible, textarea:focus-visible, input:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
 }

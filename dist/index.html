@@ -5,10 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Interface SmartScanCargo para análise de imagens de raio X e HEMD.">
   <title>SmartScanCargo</title>
-  <link rel="stylesheet" href="style.css?v=20260919-4">
+  <link rel="stylesheet" href="style.css?v=20260920-5">
 </head>
 <body>
-  <main class="app-shell">
+  <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
+    <form id="loginForm" class="login-card">
+      <img src="assets/logo-smartscargo.jpeg" alt="SmartScanCargo - Intelligent Vision for Logistics" class="login-logo">
+      <p id="loginTitle" class="login-subtitle">IA X-ray Cargo Analysis</p>
+      <label for="passwordInput">Access password</label>
+      <input id="passwordInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="numeric password" required autofocus>
+      <p id="loginError" class="login-error" role="alert" aria-live="assertive"></p>
+      <button type="submit" class="login-button">Entrar</button>
+    </form>
+  </section>
+
+  <main id="appShell" class="app-shell" hidden>
     <header class="brand-row">
       <img src="assets/logo-smartscargo.jpeg" alt="SmartScanCargo - Intelligent Vision for Logistics" class="logo">
       <div id="status" class="status" role="status" aria-live="polite">Selecione a pasta principal para começar.</div>
@@ -60,6 +71,6 @@
     </form>
   </dialog>
 
-  <script src="script.js?v=20260919-4"></script>
+  <script src="script.js?v=20260920-5"></script>
 </body>
 </html>
