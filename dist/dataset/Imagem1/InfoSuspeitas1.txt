@@ -1,9 +1,0 @@
-nro_container: SEGU2950948
-suspeito: Sim
-des_conteudo: CHEIO
-ncm_nota: NULL
-mercadoria_nf: NULL
-ncm_mercadoria_manifestada: 8516
-mercadoria_manifestada: Aquecedores elétricos de água, incluindo os de imersão; APA-RELHOS ELÉTRICOS PARA AQUECIMENTO DE AMBIENTES, DO SOLO OU
-UUID\PASTA: event-00281d6c-b10f-4bdd-904f-1bb3d59ffaa6
-Data/Imagem: 20260323-0263
