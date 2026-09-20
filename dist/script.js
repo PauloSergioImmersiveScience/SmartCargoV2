@@ -139,7 +139,29 @@ function findNextPendingPosition(afterPosition = -1) {
   return -1;
 }
 
+function ensureMessageDialog() {
+  if (elements.messageDialog && elements.messageDialogTitle && elements.messageDialogText) return;
+
+  const dialog = document.createElement("dialog");
+  dialog.id = "messageDialog";
+  dialog.className = "confirm-dialog";
+  dialog.innerHTML = `
+    <form method="dialog">
+      <h2 id="messageDialogTitle">Aviso</h2>
+      <p id="messageDialogText" class="message-text"></p>
+      <div class="dialog-actions">
+        <button value="ok" class="dialog-button confirm-button">OK</button>
+      </div>
+    </form>`;
+  document.body.appendChild(dialog);
+  elements.messageDialog = dialog;
+  elements.messageDialogTitle = dialog.querySelector("#messageDialogTitle");
+  elements.messageDialogText = dialog.querySelector("#messageDialogText");
+  elements.messageDialogText.style.whiteSpace = "pre-line";
+}
+
 function showMessage(title, message) {
+  ensureMessageDialog();
   elements.messageDialogTitle.textContent = title;
   elements.messageDialogText.textContent = message;
   elements.messageDialog.returnValue = "";
@@ -590,6 +612,8 @@ elements.reportText.addEventListener("blur", () => {
 
 elements.report.addEventListener("click", async () => {
   if (state.currentPosition < 0 || !state.rootHandle) return;
+  let reportFileSaved = false;
+  let savedIndex = null;
   try {
     let permission = await state.rootHandle.queryPermission({ mode: "readwrite" });
     if (permission !== "granted") permission = await state.rootHandle.requestPermission({ mode: "readwrite" });
@@ -607,6 +631,8 @@ elements.report.addEventListener("click", async () => {
     const writable = await reportHandle.createWritable();
     await writable.write(savedReport);
     await writable.close();
+    reportFileSaved = true;
+    savedIndex = index;
     state.completedIndices.add(index);
     await writeCompletedIndices();
     updateControls();
@@ -629,7 +655,11 @@ elements.report.addEventListener("click", async () => {
       await finishPendingQueue();
     }
   } catch (error) {
-    setStatus(`Não foi possível salvar o relatório: ${error.message}`, "error");
+    if (reportFileSaved) {
+      setStatus(`Relatorio${savedIndex}.txt foi salvo, mas ocorreu uma falha depois da gravação: ${error.message}`, "error");
+    } else {
+      setStatus(`Não foi possível salvar o relatório: ${error.message}`, "error");
+    }
   }
 });
 
