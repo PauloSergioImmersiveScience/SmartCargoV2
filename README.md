@@ -70,3 +70,5 @@ O JavaScript também cria essa caixa automaticamente caso o navegador ainda este
 ## Ampliação dos bounding boxes
 
 Com uma imagem carregada, clique com o botão direito dentro de qualquer BB na imagem de Raio-X ou HEMD. O sistema abre uma janela independente contendo somente aquela região. A janela pode ser redimensionada, e o recorte é escalonado proporcionalmente para ocupar o espaço disponível.
+
+Dentro da janela independente, posicione o cursor sobre o recorte e use a roda do mouse para aumentar ou diminuir o zoom. O ponto sob o cursor é usado como referência da ampliação. Um clique duplo restaura o zoom para 100%.
