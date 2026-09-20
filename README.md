@@ -6,6 +6,16 @@ As coordenadas das bounding boxes não são exibidas no campo de edição do rel
 
 Para cada caixa criada, o campo visível recebe uma linha de comentário no formato `BB1: comente ...`, `BB2: comente ...` e assim sucessivamente. Somente o relatório salvo contém a seção `Coordenadas dos BBs`, associando cada índice às suas coordenadas numéricas.
 
+## Senha de acesso
+
+A aplicação abre inicialmente uma tela de acesso. A senha padrão é `123456`. Para alterá-la, edite o arquivo `dist/script.js` e modifique somente o valor da constante localizada no início do arquivo:
+
+```javascript
+const ACCESS_PASSWORD = "123456";
+```
+
+Esta verificação ocorre no navegador e serve apenas como uma barreira simples de acesso; ela não substitui autenticação segura realizada por um servidor.
+
 ## Navegadores compatíveis
 
 Use uma versão atual do Google Chrome ou Microsoft Edge. A aplicação utiliza a File System Access API para ler e gravar na pasta escolhida pelo usuário.
