@@ -137,7 +137,7 @@ function findNextPendingPosition(afterPosition = -1) {
 }
 
 function finishPendingQueue() {
-  window.alert("Não existem mais imagens pendentes para análise. O sistema retornará ao início.");
+  window.alert("Não existem mais imagens pendentes para análise. Escolha uma imagem já analisada para reanalisar ou O sistema retornará ao início.");
   clearDisplayedState(false);
   setStatus("Todas as imagens foram analisadas. Sistema restaurado ao estado inicial.", "success");
 }
