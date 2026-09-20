@@ -564,12 +564,12 @@ function openBoxPreview(boxIndex, source) {
     body { display: grid; grid-template-rows: auto 1fr; color: #fff; font-family: "Segoe UI", sans-serif; }
     header { padding: 10px 16px; background: #111827; font-weight: 700; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
     header span { color: #cbd5e1; font-size: 13px; font-weight: 400; }
-    .preview { min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: zoom-in; outline: none; }
+    .preview { min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; outline: none; touch-action: none; }
     img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; transform: scale(1); transform-origin: center; user-select: none; -webkit-user-drag: none; }
   </style>
 </head>
 <body>
-  <header><strong>BB${boxIndex + 1} — ${sourceLabel}</strong><span id="zoomStatus">Zoom: 100% · use a roda do mouse</span></header>
+  <header><strong>BB${boxIndex + 1} — ${sourceLabel}</strong><span id="zoomStatus">Zoom: 100% · roda: zoom · botão direito: arrastar</span></header>
   <div class="preview" tabindex="0"><img src="${imageUrl}" alt="Ampliação do BB${boxIndex + 1}" draggable="false"></div>
 </body>
 </html>`);
@@ -578,8 +578,21 @@ function openBoxPreview(boxIndex, source) {
   const previewImage = popup.document.querySelector("img");
   const zoomStatus = popup.document.querySelector("#zoomStatus");
   let zoom = 1;
+  let panX = 0;
+  let panY = 0;
+  let panning = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let panStartX = 0;
+  let panStartY = 0;
+
+  const updatePreviewTransform = () => {
+    previewImage.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    zoomStatus.textContent = `Zoom: ${Math.round(zoom * 100)}% · roda: zoom · botão direito: arrastar`;
+  };
 
   previewArea.addEventListener("click", () => previewArea.focus());
+  previewArea.addEventListener("contextmenu", event => event.preventDefault());
   previewArea.addEventListener("wheel", event => {
     event.preventDefault();
     const rect = previewArea.getBoundingClientRect();
@@ -588,17 +601,51 @@ function openBoxPreview(boxIndex, source) {
     previewImage.style.transformOrigin = `${originX}% ${originY}%`;
     const factor = event.deltaY < 0 ? 1.15 : 1 / 1.15;
     zoom = Math.max(0.25, Math.min(12, zoom * factor));
-    previewImage.style.transform = `scale(${zoom})`;
-    previewArea.style.cursor = zoom > 1 ? "zoom-out" : "zoom-in";
-    zoomStatus.textContent = `Zoom: ${Math.round(zoom * 100)}% · use a roda do mouse`;
+    updatePreviewTransform();
   }, { passive: false });
+
+  previewArea.addEventListener("pointerdown", event => {
+    if (event.button !== 2) return;
+    event.preventDefault();
+    panning = true;
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+    panStartX = panX;
+    panStartY = panY;
+    previewArea.style.cursor = "grabbing";
+    previewArea.setPointerCapture(event.pointerId);
+  });
+
+  previewArea.addEventListener("pointermove", event => {
+    if (!panning) return;
+    panX = panStartX + event.clientX - dragStartX;
+    panY = panStartY + event.clientY - dragStartY;
+    updatePreviewTransform();
+  });
+
+  const finishPanning = event => {
+    if (!panning) return;
+    panning = false;
+    previewArea.style.cursor = "grab";
+    if (event.pointerId !== undefined && previewArea.hasPointerCapture(event.pointerId)) {
+      previewArea.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  previewArea.addEventListener("pointerup", finishPanning);
+  previewArea.addEventListener("pointercancel", finishPanning);
+  previewArea.addEventListener("lostpointercapture", () => {
+    panning = false;
+    previewArea.style.cursor = "grab";
+  });
 
   previewArea.addEventListener("dblclick", () => {
     zoom = 1;
+    panX = 0;
+    panY = 0;
     previewImage.style.transformOrigin = "center";
-    previewImage.style.transform = "scale(1)";
-    previewArea.style.cursor = "zoom-in";
-    zoomStatus.textContent = "Zoom: 100% · use a roda do mouse";
+    previewArea.style.cursor = "grab";
+    updatePreviewTransform();
   });
   popup.focus();
   previewArea.focus();
