@@ -96,20 +96,20 @@ button, textarea { font: inherit; }
 
 .brand-row {
   min-height: 118px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 255px minmax(190px, 270px) minmax(260px, 1fr);
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
+  gap: 18px;
 }
 
 .logo { width: 255px; max-width: 44vw; height: auto; display: block; }
 
-.header-controls {
-  width: min(540px, 100%);
+.dataset-control {
+  width: 100%;
   display: grid;
   gap: 7px;
 }
-.header-controls label { font-weight: 700; color: #334155; }
+.dataset-control label { font-weight: 700; color: #334155; }
 .dataset-path {
   width: 100%;
   min-height: 42px;
@@ -124,6 +124,7 @@ button, textarea { font: inherit; }
 
 .status {
   width: 100%;
+  min-height: 66px;
   padding: 10px 14px;
   border-left: 4px solid var(--brand);
   background: #f0f9ff;
@@ -233,6 +234,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .confirm-dialog h2 { margin: 0 0 10px; }
 .confirm-dialog p { margin: 0; line-height: 1.5; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.initial-choice-actions { flex-wrap: wrap; }
 .start-choice-actions { flex-wrap: wrap; }
 .dialog-button { padding: 11px 18px; border: 1px solid #94a3b8; border-radius: 10px; cursor: pointer; }
 .cancel-button { background: #fff; }
@@ -240,9 +242,9 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 
 @media (max-width: 760px) {
   .app-shell { padding: 16px 14px 24px; }
-  .brand-row { min-height: auto; flex-direction: column; }
+  .brand-row { min-height: auto; grid-template-columns: 1fr; }
   .logo { max-width: 70vw; }
-  .header-controls { width: 100%; }
+  .dataset-control { width: 100%; }
   .status { width: 100%; max-width: none; }
   .toolbar { grid-template-columns: 1fr; gap: 12px; }
   .action-button { min-height: 56px; }

@@ -18,7 +18,9 @@ const elements = {
   xrayPlaceholder: document.querySelector("#xrayPlaceholder"),
   hemdCanvas: document.querySelector("#hemdCanvas"),
   hemdPlaceholder: document.querySelector("#hemdPlaceholder"),
-  dialog: document.querySelector("#confirmDialog")
+  dialog: document.querySelector("#confirmDialog"),
+  initialChoiceDialog: document.querySelector("#initialChoiceDialog"),
+  chooseReviewedButton: document.querySelector("#chooseReviewedButton")
 };
 
 const ctx = elements.xrayCanvas.getContext("2d", { willReadFrequently: true });
@@ -51,7 +53,7 @@ function setStatus(message, kind = "info") {
 
 function updateControls() {
   const loaded = state.currentPosition >= 0;
-  elements.upload.textContent = "UpLoad Images";
+  elements.upload.textContent = loaded ? "Próxima Imagem" : "UpLoad Images";
   elements.undo.disabled = state.history.length === 0;
   elements.report.disabled = !loaded;
   elements.reportText.disabled = !loaded;
@@ -203,7 +205,7 @@ async function restoreDatasetHandle() {
   }
 }
 
-async function chooseSpecificImagePosition() {
+async function chooseSpecificImagePosition(reviewedOnly = false) {
   try {
     const [fileHandle] = await window.showOpenFilePicker({
       startIn: state.rootHandle,
@@ -219,12 +221,61 @@ async function chooseSpecificImagePosition() {
     const selectedIndex = Number(match[1]);
     const position = state.items.findIndex(item => item.index === selectedIndex);
     if (position < 0) throw new Error(`O dataset selecionado não contém o diretório Imagem${selectedIndex}.`);
+    if (reviewedOnly && !state.completedIndices.has(selectedIndex)) {
+      throw new Error(`A Imagem${selectedIndex} ainda está pendente. Para uma seleção manual, escolha uma imagem já analisada.`);
+    }
     return position;
   } catch (error) {
     if (error.name === "AbortError") return -1;
     throw error;
   }
 }
+
+async function chooseAndActivateDataset() {
+  if (!("showDirectoryPicker" in window)) {
+    throw new Error("Este navegador não permite acesso direto a pastas. Abra o sistema no Chrome ou Edge atualizado.");
+  }
+  const handle = await window.showDirectoryPicker({
+    mode: "readwrite",
+    startIn: state.rootHandle || state.savedRootHandle || "documents"
+  });
+  const permission = await handle.requestPermission({ mode: "readwrite" });
+  if (permission !== "granted") throw new Error("A permissão de leitura e gravação não foi concedida.");
+  await saveDatasetHandle(handle);
+  await activateDataset(handle);
+}
+
+let initialChoiceResolve = null;
+
+function askInitialChoice() {
+  return new Promise(resolve => {
+    initialChoiceResolve = resolve;
+    elements.initialChoiceDialog.returnValue = "";
+    elements.initialChoiceDialog.showModal();
+  });
+}
+
+elements.initialChoiceDialog.addEventListener("close", () => {
+  if (!initialChoiceResolve) return;
+  const resolve = initialChoiceResolve;
+  initialChoiceResolve = null;
+  resolve(-1);
+});
+
+elements.chooseReviewedButton.addEventListener("click", async () => {
+  if (!initialChoiceResolve) return;
+  try {
+    const position = await chooseSpecificImagePosition(true);
+    if (position < 0) return;
+    const resolve = initialChoiceResolve;
+    initialChoiceResolve = null;
+    elements.initialChoiceDialog.close("reviewed");
+    resolve(position);
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    setStatus(error.message, "error");
+  }
+});
 
 function parseInfo(text) {
   const values = {
@@ -429,35 +480,44 @@ elements.xrayCanvas.addEventListener("pointerup", event => {
 elements.upload.addEventListener("click", async () => {
   try {
     if (!state.rootHandle) {
-      setStatus("Clique no campo Pasta local do dataset antes de escolher uma imagem.", "error");
+      await chooseAndActivateDataset();
+      const selectedPosition = await askInitialChoice();
+      const initialPosition = selectedPosition >= 0
+        ? selectedPosition
+        : findNextPendingPosition(-1);
+      if (initialPosition < 0) {
+        setStatus("Todas as imagens da pasta já foram analisadas.", "success");
+        return;
+      }
+      pushHistory();
+      await loadItem(initialPosition);
       return;
     }
-    if (!("showOpenFilePicker" in window)) {
-      throw new Error("Este navegador não permite selecionar arquivos. Abra o sistema no Chrome ou Edge atualizado.");
+    let selectedPosition = -1;
+    if (state.currentPosition < 0) {
+      if (!("showOpenFilePicker" in window)) {
+        throw new Error("Este navegador não permite selecionar arquivos. Abra o sistema no Chrome ou Edge atualizado.");
+      }
+      selectedPosition = await chooseSpecificImagePosition(true);
     }
-    const selectedPosition = await chooseSpecificImagePosition();
-    const position = selectedPosition >= 0
-      ? selectedPosition
-      : findNextPendingPosition(state.currentPosition);
+    const position = selectedPosition >= 0 ? selectedPosition : findNextPendingPosition(state.currentPosition);
     if (position < 0) {
       setStatus("Todas as imagens da pasta já foram analisadas.", "success");
       return;
     }
     pushHistory();
     await loadItem(position);
-    if (selectedPosition >= 0 && state.completedIndices.has(state.items[position].index)) {
+    if (selectedPosition >= 0) {
       setStatus(`Imagem${state.items[position].index} carregada para reavaliação.`, "success");
     }
   } catch (error) {
+    if (error.name === "AbortError") return;
     setStatus(error.message, "error");
   }
 });
 
 elements.datasetPath.addEventListener("click", async () => {
   try {
-    if (!("showDirectoryPicker" in window)) {
-      throw new Error("Este navegador não permite acesso direto a pastas. Abra o sistema no Chrome ou Edge atualizado.");
-    }
     if (!state.rootHandle && state.savedRootHandle) {
       const permission = await state.savedRootHandle.requestPermission({ mode: "readwrite" });
       if (permission === "granted") {
@@ -465,14 +525,7 @@ elements.datasetPath.addEventListener("click", async () => {
         return;
       }
     }
-    const handle = await window.showDirectoryPicker({
-      mode: "readwrite",
-      startIn: state.rootHandle || state.savedRootHandle || "documents"
-    });
-    const permission = await handle.requestPermission({ mode: "readwrite" });
-    if (permission !== "granted") throw new Error("A permissão de leitura e gravação não foi concedida.");
-    await saveDatasetHandle(handle);
-    await activateDataset(handle);
+    await chooseAndActivateDataset();
   } catch (error) {
     if (error.name === "AbortError") return;
     setStatus(error.message, "error");
@@ -538,6 +591,18 @@ elements.report.addEventListener("click", async () => {
     const savedLocation = `${state.rootHandle.name}/Relatorios/Relatorio${index}.txt`;
     setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado.`, "success");
     window.alert(`Relatório Salvo em ${savedLocation}\n\nProgresso atualizado em ${state.rootHandle.name}/${PROGRESS_FILE_NAME}`);
+    const nextPosition = findNextPendingPosition(state.currentPosition);
+    if (nextPosition >= 0) {
+      try {
+        pushHistory();
+        await loadItem(nextPosition);
+        setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado. Imagem${state.items[nextPosition].index} carregada como próxima pendente.`, "success");
+      } catch (nextError) {
+        setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado, mas a próxima imagem não pôde ser carregada: ${nextError.message}`, "error");
+      }
+    } else {
+      setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado. Todas as imagens foram analisadas.`, "success");
+    }
   } catch (error) {
     setStatus(`Não foi possível salvar o relatório: ${error.message}`, "error");
   }
