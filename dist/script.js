@@ -562,18 +562,46 @@ function openBoxPreview(boxIndex, source) {
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #080d19; }
     body { display: grid; grid-template-rows: auto 1fr; color: #fff; font-family: "Segoe UI", sans-serif; }
-    header { padding: 10px 16px; background: #111827; font-weight: 700; }
-    .preview { min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; }
-    img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; }
+    header { padding: 10px 16px; background: #111827; font-weight: 700; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+    header span { color: #cbd5e1; font-size: 13px; font-weight: 400; }
+    .preview { min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: zoom-in; outline: none; }
+    img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; transform: scale(1); transform-origin: center; user-select: none; -webkit-user-drag: none; }
   </style>
 </head>
 <body>
-  <header>BB${boxIndex + 1} — ${sourceLabel}</header>
-  <div class="preview"><img src="${imageUrl}" alt="Ampliação do BB${boxIndex + 1}"></div>
+  <header><strong>BB${boxIndex + 1} — ${sourceLabel}</strong><span id="zoomStatus">Zoom: 100% · use a roda do mouse</span></header>
+  <div class="preview" tabindex="0"><img src="${imageUrl}" alt="Ampliação do BB${boxIndex + 1}" draggable="false"></div>
 </body>
 </html>`);
   popup.document.close();
+  const previewArea = popup.document.querySelector(".preview");
+  const previewImage = popup.document.querySelector("img");
+  const zoomStatus = popup.document.querySelector("#zoomStatus");
+  let zoom = 1;
+
+  previewArea.addEventListener("click", () => previewArea.focus());
+  previewArea.addEventListener("wheel", event => {
+    event.preventDefault();
+    const rect = previewArea.getBoundingClientRect();
+    const originX = ((event.clientX - rect.left) / rect.width) * 100;
+    const originY = ((event.clientY - rect.top) / rect.height) * 100;
+    previewImage.style.transformOrigin = `${originX}% ${originY}%`;
+    const factor = event.deltaY < 0 ? 1.15 : 1 / 1.15;
+    zoom = Math.max(0.25, Math.min(12, zoom * factor));
+    previewImage.style.transform = `scale(${zoom})`;
+    previewArea.style.cursor = zoom > 1 ? "zoom-out" : "zoom-in";
+    zoomStatus.textContent = `Zoom: ${Math.round(zoom * 100)}% · use a roda do mouse`;
+  }, { passive: false });
+
+  previewArea.addEventListener("dblclick", () => {
+    zoom = 1;
+    previewImage.style.transformOrigin = "center";
+    previewImage.style.transform = "scale(1)";
+    previewArea.style.cursor = "zoom-in";
+    zoomStatus.textContent = "Zoom: 100% · use a roda do mouse";
+  });
   popup.focus();
+  previewArea.focus();
 }
 
 elements.xrayCanvas.addEventListener("contextmenu", event => {
