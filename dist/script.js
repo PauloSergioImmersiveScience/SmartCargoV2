@@ -482,6 +482,118 @@ function pointerPosition(event) {
   };
 }
 
+function canvasPosition(event, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: Math.max(0, Math.min(canvas.width, (event.clientX - rect.left) * canvas.width / rect.width)),
+    y: Math.max(0, Math.min(canvas.height, (event.clientY - rect.top) * canvas.height / rect.height))
+  };
+}
+
+function findBoxAtPosition(position, scaleX = 1, scaleY = 1) {
+  for (let index = state.boxes.length - 1; index >= 0; index -= 1) {
+    const box = state.boxes[index];
+    const x = box.x * scaleX;
+    const y = box.y * scaleY;
+    const width = box.width * scaleX;
+    const height = box.height * scaleY;
+    if (position.x >= x && position.x <= x + width && position.y >= y && position.y <= y + height) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function createBoxPreview(boxIndex, source) {
+  const box = state.boxes[boxIndex];
+  const preview = document.createElement("canvas");
+
+  if (source === "hemd") {
+    const scaleX = elements.hemdCanvas.width / elements.xrayCanvas.width;
+    const scaleY = elements.hemdCanvas.height / elements.xrayCanvas.height;
+    const sourceX = Math.round(box.x * scaleX);
+    const sourceY = Math.round(box.y * scaleY);
+    const sourceWidth = Math.max(1, Math.round(box.width * scaleX));
+    const sourceHeight = Math.max(1, Math.round(box.height * scaleY));
+    preview.width = sourceWidth;
+    preview.height = sourceHeight;
+    preview.getContext("2d").drawImage(
+      hemdOriginalImage,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      0, 0, sourceWidth, sourceHeight
+    );
+    return preview;
+  }
+
+  preview.width = Math.max(1, Math.round(box.width));
+  preview.height = Math.max(1, Math.round(box.height));
+  const previewContext = preview.getContext("2d", { willReadFrequently: true });
+  previewContext.drawImage(
+    originalCanvas,
+    box.x, box.y, box.width, box.height,
+    0, 0, preview.width, preview.height
+  );
+  const imageData = previewContext.getImageData(0, 0, preview.width, preview.height);
+  previewContext.putImageData(equalizeRegion(imageData), 0, 0);
+  return preview;
+}
+
+function openBoxPreview(boxIndex, source) {
+  const preview = createBoxPreview(boxIndex, source);
+  const imageUrl = preview.toDataURL("image/png");
+  const sourceLabel = source === "hemd" ? "HEMD" : "Raio-X";
+  const popupWidth = Math.min(1100, Math.max(520, preview.width + 40));
+  const popupHeight = Math.min(850, Math.max(420, preview.height + 90));
+  const popup = window.open("", `SmartScanCargo_BB${boxIndex + 1}_${source}`, `width=${popupWidth},height=${popupHeight},resizable=yes,scrollbars=no`);
+
+  if (!popup) {
+    showMessage("Janela bloqueada", "O navegador bloqueou a janela do BB. Autorize pop-ups para este endereço e tente novamente.");
+    return;
+  }
+
+  popup.document.open();
+  popup.document.write(`<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BB${boxIndex + 1} — ${sourceLabel}</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #080d19; }
+    body { display: grid; grid-template-rows: auto 1fr; color: #fff; font-family: "Segoe UI", sans-serif; }
+    header { padding: 10px 16px; background: #111827; font-weight: 700; }
+    .preview { min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; }
+    img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; }
+  </style>
+</head>
+<body>
+  <header>BB${boxIndex + 1} — ${sourceLabel}</header>
+  <div class="preview"><img src="${imageUrl}" alt="Ampliação do BB${boxIndex + 1}"></div>
+</body>
+</html>`);
+  popup.document.close();
+  popup.focus();
+}
+
+elements.xrayCanvas.addEventListener("contextmenu", event => {
+  if (state.currentPosition < 0) return;
+  const boxIndex = findBoxAtPosition(canvasPosition(event, elements.xrayCanvas));
+  if (boxIndex < 0) return;
+  event.preventDefault();
+  openBoxPreview(boxIndex, "xray");
+});
+
+elements.hemdCanvas.addEventListener("contextmenu", event => {
+  if (state.currentPosition < 0) return;
+  const scaleX = elements.hemdCanvas.width / elements.xrayCanvas.width;
+  const scaleY = elements.hemdCanvas.height / elements.xrayCanvas.height;
+  const boxIndex = findBoxAtPosition(canvasPosition(event, elements.hemdCanvas), scaleX, scaleY);
+  if (boxIndex < 0) return;
+  event.preventDefault();
+  openBoxPreview(boxIndex, "hemd");
+});
+
 function normalizedBox(start, end) {
   const x = Math.min(start.x, end.x);
   const y = Math.min(start.y, end.y);
@@ -489,7 +601,7 @@ function normalizedBox(start, end) {
 }
 
 elements.xrayCanvas.addEventListener("pointerdown", event => {
-  if (state.currentPosition < 0) return;
+  if (state.currentPosition < 0 || event.button !== 0) return;
   state.dragging = true;
   state.dragStart = pointerPosition(event);
   state.draftBox = { x: state.dragStart.x, y: state.dragStart.y, width: 0, height: 0 };
