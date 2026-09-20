@@ -569,7 +569,7 @@ function openBoxPreview(boxIndex, source) {
   </style>
 </head>
 <body>
-  <header><strong>BB${boxIndex + 1} — ${sourceLabel}</strong><span id="zoomStatus">Zoom: 100% · roda: zoom · botão direito: arrastar</span></header>
+  <header><strong>BB${boxIndex + 1} — ${sourceLabel}</strong><span id="zoomStatus">Zoom: 100% · roda: zoom · botão esquerdo: arrastar</span></header>
   <div class="preview" tabindex="0"><img src="${imageUrl}" alt="Ampliação do BB${boxIndex + 1}" draggable="false"></div>
 </body>
 </html>`);
@@ -588,11 +588,10 @@ function openBoxPreview(boxIndex, source) {
 
   const updatePreviewTransform = () => {
     previewImage.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
-    zoomStatus.textContent = `Zoom: ${Math.round(zoom * 100)}% · roda: zoom · botão direito: arrastar`;
+    zoomStatus.textContent = `Zoom: ${Math.round(zoom * 100)}% · roda: zoom · botão esquerdo: arrastar`;
   };
 
   previewArea.addEventListener("click", () => previewArea.focus());
-  previewArea.addEventListener("contextmenu", event => event.preventDefault());
   previewArea.addEventListener("wheel", event => {
     event.preventDefault();
     const rect = previewArea.getBoundingClientRect();
@@ -605,7 +604,7 @@ function openBoxPreview(boxIndex, source) {
   }, { passive: false });
 
   previewArea.addEventListener("pointerdown", event => {
-    if (event.button !== 2) return;
+    if (event.button !== 0) return;
     event.preventDefault();
     panning = true;
     dragStartX = event.clientX;
