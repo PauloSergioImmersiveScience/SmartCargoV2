@@ -1,5 +1,8 @@
 "use strict";
 
+const DATASET_BASE_PATH = "dataset";
+const DATASET_MANIFEST = `${DATASET_BASE_PATH}/manifest.json`;
+
 const elements = {
   upload: document.querySelector("#uploadButton"),
   undo: document.querySelector("#undoButton"),
@@ -22,7 +25,7 @@ const originalCtx = originalCanvas.getContext("2d", { willReadFrequently: true }
 const hemdOriginalImage = new Image();
 
 const state = {
-  rootHandle: null,
+  reportRootHandle: null,
   items: [],
   currentPosition: -1,
   boxes: [],
@@ -43,7 +46,7 @@ function setStatus(message, kind = "info") {
 
 function updateControls() {
   const loaded = state.currentPosition >= 0;
-  elements.upload.textContent = loaded ? "Próxima Imagem" : "Upload Image";
+  elements.upload.textContent = loaded ? "Próxima Imagem" : "Start System";
   elements.undo.disabled = state.history.length === 0;
   elements.report.disabled = !loaded;
   elements.reportText.disabled = !loaded;
@@ -67,31 +70,29 @@ function pushHistory() {
   updateControls();
 }
 
-function revokeUrls() {
-  if (state.xrayUrl) URL.revokeObjectURL(state.xrayUrl);
-  if (state.hemdUrl) URL.revokeObjectURL(state.hemdUrl);
+function clearImageUrls() {
   state.xrayUrl = null;
   state.hemdUrl = null;
 }
 
-async function getChildFile(directoryHandle, wantedName) {
-  for await (const entry of directoryHandle.values()) {
-    if (entry.kind === "file" && entry.name.toLowerCase() === wantedName.toLowerCase()) {
-      return entry.getFile();
-    }
+async function loadDatasetManifest() {
+  const response = await fetch(`${DATASET_MANIFEST}?v=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Não foi possível abrir ${DATASET_MANIFEST}.`);
+  const manifest = await response.json();
+  if (!Array.isArray(manifest.indices) || !manifest.indices.length) {
+    throw new Error("O manifest.json não contém uma lista de índices válida.");
   }
-  throw new Error(`Arquivo não encontrado: ${wantedName}`);
+  const indices = [...new Set(manifest.indices.map(Number))]
+    .filter(index => Number.isInteger(index) && index > 0)
+    .sort((a, b) => a - b);
+  if (!indices.length) throw new Error("O manifest.json não contém índices numéricos válidos.");
+  return indices.map(index => ({ index }));
 }
 
-async function discoverItems(rootHandle) {
-  const found = [];
-  for await (const entry of rootHandle.values()) {
-    if (entry.kind !== "directory") continue;
-    const match = /^imagem(\d+)$/i.exec(entry.name);
-    if (match) found.push({ index: Number(match[1]), directory: entry });
-  }
-  found.sort((a, b) => a.index - b.index);
-  return found;
+async function fetchText(url) {
+  const response = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Arquivo não encontrado no GitHub: ${url}`);
+  return response.text();
 }
 
 function parseInfo(text) {
@@ -130,23 +131,19 @@ function loadImage(url, imageElement) {
 
 async function loadItem(position, restored = null) {
   const item = state.items[position];
-  if (!item) throw new Error("Não existe outra imagem no diretório selecionado.");
+  if (!item) throw new Error("Não existe outra imagem cadastrada no manifest.json.");
 
   const index = item.index;
-  const [xrayFile, hemdFile, infoFile] = await Promise.all([
-    getChildFile(item.directory, `xray${index}.png`),
-    getChildFile(item.directory, `hemd${index}.png`),
-    getChildFile(item.directory, `InfoSuspeitas${index}.txt`)
-  ]);
-
-  revokeUrls();
-  state.xrayUrl = URL.createObjectURL(xrayFile);
-  state.hemdUrl = URL.createObjectURL(hemdFile);
+  const folder = `${DATASET_BASE_PATH}/Imagem${index}`;
+  clearImageUrls();
+  state.xrayUrl = `${folder}/xray${index}.png`;
+  state.hemdUrl = `${folder}/hemd${index}.png`;
 
   const xrayImage = new Image();
-  await Promise.all([
+  const [, , infoText] = await Promise.all([
     loadImage(state.xrayUrl, xrayImage),
-    loadImage(state.hemdUrl, hemdOriginalImage)
+    loadImage(state.hemdUrl, hemdOriginalImage),
+    fetchText(`${folder}/InfoSuspeitas${index}.txt`)
   ]);
 
   originalCanvas.width = xrayImage.naturalWidth;
@@ -161,7 +158,7 @@ async function loadItem(position, restored = null) {
   state.boxes = restored ? restored.boxes.map(box => ({ ...box })) : [];
   elements.reportText.value = restored
     ? restored.report
-    : buildReport(parseInfo(await infoFile.text()));
+    : buildReport(parseInfo(infoText));
 
   elements.xrayCanvas.style.display = "block";
   elements.xrayPlaceholder.hidden = true;
@@ -296,17 +293,9 @@ elements.xrayCanvas.addEventListener("pointerup", event => {
 
 elements.upload.addEventListener("click", async () => {
   try {
-    if (!state.rootHandle) {
-      if (!("showDirectoryPicker" in window)) {
-        throw new Error("Este navegador não permite gravação direta em pastas. Abra o sistema no Chrome ou Edge atualizado.");
-      }
-      const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-      const permission = await handle.requestPermission({ mode: "readwrite" });
-      if (permission !== "granted") throw new Error("A permissão de leitura e gravação não foi concedida.");
-      const items = await discoverItems(handle);
-      if (!items.length) throw new Error("A pasta selecionada não contém diretórios Imagem<índice>.");
-      state.rootHandle = handle;
-      state.items = items;
+    if (!state.items.length) {
+      setStatus("Carregando a base de dados do GitHub...");
+      state.items = await loadDatasetManifest();
       pushHistory();
       await loadItem(0);
       return;
@@ -359,12 +348,18 @@ elements.reportText.addEventListener("blur", () => {
 });
 
 elements.report.addEventListener("click", async () => {
-  if (state.currentPosition < 0 || !state.rootHandle) return;
+  if (state.currentPosition < 0) return;
   try {
-    let permission = await state.rootHandle.queryPermission({ mode: "readwrite" });
-    if (permission !== "granted") permission = await state.rootHandle.requestPermission({ mode: "readwrite" });
+    if (!("showDirectoryPicker" in window)) {
+      throw new Error("Este navegador não permite gravação direta em pastas. Abra o sistema no Chrome ou Edge atualizado.");
+    }
+    if (!state.reportRootHandle) {
+      state.reportRootHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+    }
+    let permission = await state.reportRootHandle.queryPermission({ mode: "readwrite" });
+    if (permission !== "granted") permission = await state.reportRootHandle.requestPermission({ mode: "readwrite" });
     if (permission !== "granted") throw new Error("A permissão de gravação não foi concedida.");
-    const reportsDirectory = await state.rootHandle.getDirectoryHandle("Relatorios", { create: true });
+    const reportsDirectory = await state.reportRootHandle.getDirectoryHandle("Relatorios", { create: true });
     const index = state.items[state.currentPosition].index;
     const reportHandle = await reportsDirectory.getFileHandle(`Relatorio${index}.txt`, { create: true });
     const boundingBoxes = state.boxes
@@ -377,7 +372,7 @@ elements.report.addEventListener("click", async () => {
     const writable = await reportHandle.createWritable();
     await writable.write(savedReport);
     await writable.close();
-    const savedLocation = `${state.rootHandle.name}/Relatorios/Relatorio${index}.txt`;
+    const savedLocation = `${state.reportRootHandle.name}/Relatorios/Relatorio${index}.txt`;
     setStatus(`Relatorio${index}.txt salvo na pasta Relatorios.`, "success");
     window.alert(`Relatório Salvo em ${savedLocation}`);
   } catch (error) {
@@ -386,7 +381,7 @@ elements.report.addEventListener("click", async () => {
 });
 
 function clearDisplayedState(clearFolder = true) {
-  revokeUrls();
+  clearImageUrls();
   state.currentPosition = -1;
   state.boxes = [];
   state.history = [];
@@ -395,7 +390,7 @@ function clearDisplayedState(clearFolder = true) {
   state.draftBox = null;
   state.reportBeforeEdit = null;
   if (clearFolder) {
-    state.rootHandle = null;
+    state.reportRootHandle = null;
     state.items = [];
   }
   ctx.clearRect(0, 0, elements.xrayCanvas.width, elements.xrayCanvas.height);
@@ -415,5 +410,4 @@ elements.dialog.addEventListener("close", () => {
   setStatus("Sistema restaurado ao estado inicial.", "success");
 });
 
-window.addEventListener("beforeunload", revokeUrls);
 updateControls();
