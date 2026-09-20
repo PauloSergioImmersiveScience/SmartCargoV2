@@ -20,7 +20,10 @@ const elements = {
   hemdPlaceholder: document.querySelector("#hemdPlaceholder"),
   dialog: document.querySelector("#confirmDialog"),
   initialChoiceDialog: document.querySelector("#initialChoiceDialog"),
-  chooseReviewedButton: document.querySelector("#chooseReviewedButton")
+  chooseReviewedButton: document.querySelector("#chooseReviewedButton"),
+  messageDialog: document.querySelector("#messageDialog"),
+  messageDialogTitle: document.querySelector("#messageDialogTitle"),
+  messageDialogText: document.querySelector("#messageDialogText")
 };
 
 const ctx = elements.xrayCanvas.getContext("2d", { willReadFrequently: true });
@@ -136,8 +139,21 @@ function findNextPendingPosition(afterPosition = -1) {
   return -1;
 }
 
-function finishPendingQueue() {
-  window.alert("Não existem mais imagens pendentes para análise. Escolha uma imagem já analisada para reanalisar ou O sistema retornará ao início.");
+function showMessage(title, message) {
+  elements.messageDialogTitle.textContent = title;
+  elements.messageDialogText.textContent = message;
+  elements.messageDialog.returnValue = "";
+  elements.messageDialog.showModal();
+  return new Promise(resolve => {
+    elements.messageDialog.addEventListener("close", resolve, { once: true });
+  });
+}
+
+async function finishPendingQueue() {
+  await showMessage(
+    "Análise concluída",
+    "Não existem mais imagens pendentes para análise. O sistema retornará ao início."
+  );
   clearDisplayedState(false);
   setStatus("Todas as imagens foram analisadas. Sistema restaurado ao estado inicial.", "success");
 }
@@ -492,7 +508,7 @@ elements.upload.addEventListener("click", async () => {
         ? selectedPosition
         : findNextPendingPosition(-1);
       if (initialPosition < 0) {
-        finishPendingQueue();
+        await finishPendingQueue();
         return;
       }
       pushHistory();
@@ -508,7 +524,7 @@ elements.upload.addEventListener("click", async () => {
     }
     const position = selectedPosition >= 0 ? selectedPosition : findNextPendingPosition(state.currentPosition);
     if (position < 0) {
-      finishPendingQueue();
+      await finishPendingQueue();
       return;
     }
     pushHistory();
@@ -596,7 +612,10 @@ elements.report.addEventListener("click", async () => {
     updateControls();
     const savedLocation = `${state.rootHandle.name}/Relatorios/Relatorio${index}.txt`;
     setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado.`, "success");
-    window.alert(`Relatório Salvo em ${savedLocation}\n\nProgresso atualizado em ${state.rootHandle.name}/${PROGRESS_FILE_NAME}`);
+    await showMessage(
+      "Relatório salvo",
+      `Relatório salvo em ${savedLocation}\n\nProgresso atualizado em ${state.rootHandle.name}/${PROGRESS_FILE_NAME}`
+    );
     const nextPosition = findNextPendingPosition(state.currentPosition);
     if (nextPosition >= 0) {
       try {
@@ -607,7 +626,7 @@ elements.report.addEventListener("click", async () => {
         setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado, mas a próxima imagem não pôde ser carregada: ${nextError.message}`, "error");
       }
     } else {
-      finishPendingQueue();
+      await finishPendingQueue();
     }
   } catch (error) {
     setStatus(`Não foi possível salvar o relatório: ${error.message}`, "error");

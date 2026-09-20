@@ -233,6 +233,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .confirm-dialog form { padding: 26px; }
 .confirm-dialog h2 { margin: 0 0 10px; }
 .confirm-dialog p { margin: 0; line-height: 1.5; }
+.message-text { white-space: pre-line; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 .initial-choice-actions { flex-wrap: wrap; }
 .start-choice-actions { flex-wrap: wrap; }
