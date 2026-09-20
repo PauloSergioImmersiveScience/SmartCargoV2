@@ -104,9 +104,26 @@ button, textarea { font: inherit; }
 
 .logo { width: 255px; max-width: 44vw; height: auto; display: block; }
 
+.header-controls {
+  width: min(540px, 100%);
+  display: grid;
+  gap: 7px;
+}
+.header-controls label { font-weight: 700; color: #334155; }
+.dataset-path {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1.5px solid #94a3b8;
+  border-radius: 9px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+}
+.dataset-path.selected { border-color: #15803d; color: #14532d; background: #f0fdf4; }
+
 .status {
-  max-width: 540px;
-  margin-top: 12px;
+  width: 100%;
   padding: 10px 14px;
   border-left: 4px solid var(--brand);
   background: #f0f9ff;
@@ -216,6 +233,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
 .confirm-dialog h2 { margin: 0 0 10px; }
 .confirm-dialog p { margin: 0; line-height: 1.5; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.start-choice-actions { flex-wrap: wrap; }
 .dialog-button { padding: 11px 18px; border: 1px solid #94a3b8; border-radius: 10px; cursor: pointer; }
 .cancel-button { background: #fff; }
 .confirm-button { background: #b91c1c; border-color: #b91c1c; color: #fff; }
@@ -224,6 +242,7 @@ button:disabled { opacity: .42; cursor: not-allowed; }
   .app-shell { padding: 16px 14px 24px; }
   .brand-row { min-height: auto; flex-direction: column; }
   .logo { max-width: 70vw; }
+  .header-controls { width: 100%; }
   .status { width: 100%; max-width: none; }
   .toolbar { grid-template-columns: 1fr; gap: 12px; }
   .action-button { min-height: 56px; }

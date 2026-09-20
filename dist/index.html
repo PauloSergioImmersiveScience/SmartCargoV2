@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Interface SmartScanCargo para análise de imagens de raio X e HEMD.">
   <title>SmartScanCargo</title>
-  <link rel="stylesheet" href="style.css?v=20260920-9">
+  <link rel="stylesheet" href="style.css?v=20260920-12">
 </head>
 <body>
   <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
@@ -27,7 +27,11 @@
   <main id="appShell" class="app-shell" hidden>
     <header class="brand-row">
       <img src="assets/logo-smartscargo.jpeg" alt="SmartScanCargo - Intelligent Vision for Logistics" class="logo">
-      <div id="status" class="status" role="status" aria-live="polite">Selecione a pasta principal para começar.</div>
+      <div class="header-controls">
+        <label for="datasetPath">Pasta local do dataset</label>
+        <input id="datasetPath" class="dataset-path" type="text" readonly placeholder="Clique para escolher a pasta" title="Clique para escolher ou autorizar a pasta do dataset">
+        <div id="status" class="status" role="status" aria-live="polite">Selecione a pasta principal para começar.</div>
+      </div>
     </header>
 
     <section class="toolbar" aria-label="Controles principais">
@@ -115,6 +119,6 @@
       });
     })();
   </script>
-  <script src="script.js?v=20260920-9"></script>
+  <script src="script.js?v=20260920-12"></script>
 </body>
 </html>

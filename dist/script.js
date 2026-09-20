@@ -1,11 +1,17 @@
 "use strict";
 
+const PROGRESS_FILE_NAME = "count-images.txt";
+const HANDLE_DB_NAME = "SmartScanCargoLocalSettings";
+const HANDLE_STORE_NAME = "file-system-handles";
+const HANDLE_KEY = "dataset-root";
+
 const elements = {
   upload: document.querySelector("#uploadButton"),
   undo: document.querySelector("#undoButton"),
   reset: document.querySelector("#resetButton"),
   report: document.querySelector("#reportButton"),
   reportText: document.querySelector("#reportText"),
+  datasetPath: document.querySelector("#datasetPath"),
   status: document.querySelector("#status"),
   currentItem: document.querySelector("#currentItem"),
   xrayCanvas: document.querySelector("#xrayCanvas"),
@@ -23,7 +29,9 @@ const hemdOriginalImage = new Image();
 
 const state = {
   rootHandle: null,
+  savedRootHandle: null,
   items: [],
+  completedIndices: new Set(),
   currentPosition: -1,
   boxes: [],
   history: [],
@@ -43,7 +51,7 @@ function setStatus(message, kind = "info") {
 
 function updateControls() {
   const loaded = state.currentPosition >= 0;
-  elements.upload.textContent = loaded ? "Próxima Imagem" : "UpLoad Images";
+  elements.upload.textContent = "UpLoad Images";
   elements.undo.disabled = state.history.length === 0;
   elements.report.disabled = !loaded;
   elements.reportText.disabled = !loaded;
@@ -92,6 +100,130 @@ async function discoverItems(rootHandle) {
   }
   found.sort((a, b) => a.index - b.index);
   return found;
+}
+
+async function readCompletedIndices(rootHandle) {
+  try {
+    const fileHandle = await rootHandle.getFileHandle(PROGRESS_FILE_NAME);
+    const text = await (await fileHandle.getFile()).text();
+    return new Set(
+      (text.match(/\d+/g) || [])
+        .map(Number)
+        .filter(index => Number.isInteger(index) && index > 0)
+    );
+  } catch (error) {
+    if (error.name === "NotFoundError") return new Set();
+    throw error;
+  }
+}
+
+async function writeCompletedIndices() {
+  const fileHandle = await state.rootHandle.getFileHandle(PROGRESS_FILE_NAME, { create: true });
+  const indices = [...state.completedIndices].sort((a, b) => a - b);
+  const writable = await fileHandle.createWritable();
+  await writable.write(indices.length ? `${indices.join("\n")}\n` : "");
+  await writable.close();
+}
+
+function findNextPendingPosition(afterPosition = -1) {
+  if (!state.items.length) return -1;
+  for (let offset = 1; offset <= state.items.length; offset += 1) {
+    const position = (afterPosition + offset) % state.items.length;
+    if (!state.completedIndices.has(state.items[position].index)) return position;
+  }
+  return -1;
+}
+
+function openHandleDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(HANDLE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(HANDLE_STORE_NAME)) {
+        request.result.createObjectStore(HANDLE_STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveDatasetHandle(handle) {
+  const database = await openHandleDatabase();
+  await new Promise((resolve, reject) => {
+    const transaction = database.transaction(HANDLE_STORE_NAME, "readwrite");
+    transaction.objectStore(HANDLE_STORE_NAME).put(handle, HANDLE_KEY);
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+  });
+  database.close();
+}
+
+async function readDatasetHandle() {
+  const database = await openHandleDatabase();
+  const handle = await new Promise((resolve, reject) => {
+    const request = database.transaction(HANDLE_STORE_NAME, "readonly")
+      .objectStore(HANDLE_STORE_NAME)
+      .get(HANDLE_KEY);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+  database.close();
+  return handle;
+}
+
+async function activateDataset(handle) {
+  const items = await discoverItems(handle);
+  if (!items.length) throw new Error("A pasta selecionada não contém diretórios Imagem<índice>.");
+  clearDisplayedState(false);
+  state.rootHandle = handle;
+  state.savedRootHandle = handle;
+  state.items = items;
+  state.completedIndices = await readCompletedIndices(handle);
+  elements.datasetPath.value = handle.name;
+  elements.datasetPath.classList.add("selected");
+  updateControls();
+  const pendingCount = items.filter(item => !state.completedIndices.has(item.index)).length;
+  setStatus(`Dataset ${handle.name} carregado: ${pendingCount} imagem(ns) pendente(s).`, "success");
+}
+
+async function restoreDatasetHandle() {
+  try {
+    const handle = await readDatasetHandle();
+    if (!handle) return;
+    state.savedRootHandle = handle;
+    elements.datasetPath.value = handle.name;
+    const permission = await handle.queryPermission({ mode: "readwrite" });
+    if (permission === "granted") {
+      await activateDataset(handle);
+    } else {
+      setStatus(`Clique no campo da pasta para autorizar novamente o dataset ${handle.name}.`);
+    }
+  } catch (error) {
+    setStatus(`Não foi possível recuperar a pasta salva: ${error.message}`, "error");
+  }
+}
+
+async function chooseSpecificImagePosition() {
+  try {
+    const [fileHandle] = await window.showOpenFilePicker({
+      startIn: state.rootHandle,
+      multiple: false,
+      excludeAcceptAllOption: true,
+      types: [{
+        description: "Imagem de raio X ou HEMD",
+        accept: { "image/png": [".png"] }
+      }]
+    });
+    const match = /^(?:xray|hemd)(\d+)\.png$/i.exec(fileHandle.name);
+    if (!match) throw new Error("Selecione um arquivo com nome xray<índice>.png ou hemd<índice>.png.");
+    const selectedIndex = Number(match[1]);
+    const position = state.items.findIndex(item => item.index === selectedIndex);
+    if (position < 0) throw new Error(`O dataset selecionado não contém o diretório Imagem${selectedIndex}.`);
+    return position;
+  } catch (error) {
+    if (error.name === "AbortError") return -1;
+    throw error;
+  }
 }
 
 function parseInfo(text) {
@@ -297,27 +429,50 @@ elements.xrayCanvas.addEventListener("pointerup", event => {
 elements.upload.addEventListener("click", async () => {
   try {
     if (!state.rootHandle) {
-      if (!("showDirectoryPicker" in window)) {
-        throw new Error("Este navegador não permite gravação direta em pastas. Abra o sistema no Chrome ou Edge atualizado.");
-      }
-      const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-      const permission = await handle.requestPermission({ mode: "readwrite" });
-      if (permission !== "granted") throw new Error("A permissão de leitura e gravação não foi concedida.");
-      const items = await discoverItems(handle);
-      if (!items.length) throw new Error("A pasta selecionada não contém diretórios Imagem<índice>.");
-      state.rootHandle = handle;
-      state.items = items;
-      pushHistory();
-      await loadItem(0);
+      setStatus("Clique no campo Pasta local do dataset antes de escolher uma imagem.", "error");
       return;
     }
-    const next = state.currentPosition + 1;
-    if (next >= state.items.length) {
-      setStatus("A última imagem do diretório já está carregada.");
+    if (!("showOpenFilePicker" in window)) {
+      throw new Error("Este navegador não permite selecionar arquivos. Abra o sistema no Chrome ou Edge atualizado.");
+    }
+    const selectedPosition = await chooseSpecificImagePosition();
+    const position = selectedPosition >= 0
+      ? selectedPosition
+      : findNextPendingPosition(state.currentPosition);
+    if (position < 0) {
+      setStatus("Todas as imagens da pasta já foram analisadas.", "success");
       return;
     }
     pushHistory();
-    await loadItem(next);
+    await loadItem(position);
+    if (selectedPosition >= 0 && state.completedIndices.has(state.items[position].index)) {
+      setStatus(`Imagem${state.items[position].index} carregada para reavaliação.`, "success");
+    }
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
+});
+
+elements.datasetPath.addEventListener("click", async () => {
+  try {
+    if (!("showDirectoryPicker" in window)) {
+      throw new Error("Este navegador não permite acesso direto a pastas. Abra o sistema no Chrome ou Edge atualizado.");
+    }
+    if (!state.rootHandle && state.savedRootHandle) {
+      const permission = await state.savedRootHandle.requestPermission({ mode: "readwrite" });
+      if (permission === "granted") {
+        await activateDataset(state.savedRootHandle);
+        return;
+      }
+    }
+    const handle = await window.showDirectoryPicker({
+      mode: "readwrite",
+      startIn: state.rootHandle || state.savedRootHandle || "documents"
+    });
+    const permission = await handle.requestPermission({ mode: "readwrite" });
+    if (permission !== "granted") throw new Error("A permissão de leitura e gravação não foi concedida.");
+    await saveDatasetHandle(handle);
+    await activateDataset(handle);
   } catch (error) {
     if (error.name === "AbortError") return;
     setStatus(error.message, "error");
@@ -377,9 +532,12 @@ elements.report.addEventListener("click", async () => {
     const writable = await reportHandle.createWritable();
     await writable.write(savedReport);
     await writable.close();
+    state.completedIndices.add(index);
+    await writeCompletedIndices();
+    updateControls();
     const savedLocation = `${state.rootHandle.name}/Relatorios/Relatorio${index}.txt`;
-    setStatus(`Relatorio${index}.txt salvo na pasta Relatorios.`, "success");
-    window.alert(`Relatório Salvo em ${savedLocation}`);
+    setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado.`, "success");
+    window.alert(`Relatório Salvo em ${savedLocation}\n\nProgresso atualizado em ${state.rootHandle.name}/${PROGRESS_FILE_NAME}`);
   } catch (error) {
     setStatus(`Não foi possível salvar o relatório: ${error.message}`, "error");
   }
@@ -397,6 +555,7 @@ function clearDisplayedState(clearFolder = true) {
   if (clearFolder) {
     state.rootHandle = null;
     state.items = [];
+    state.completedIndices = new Set();
   }
   ctx.clearRect(0, 0, elements.xrayCanvas.width, elements.xrayCanvas.height);
   hemdCtx.clearRect(0, 0, elements.hemdCanvas.width, elements.hemdCanvas.height);
@@ -411,9 +570,10 @@ function clearDisplayedState(clearFolder = true) {
 elements.reset.addEventListener("click", () => elements.dialog.showModal());
 elements.dialog.addEventListener("close", () => {
   if (elements.dialog.returnValue !== "confirm") return;
-  clearDisplayedState(true);
-  setStatus("Sistema restaurado ao estado inicial.", "success");
+  clearDisplayedState(false);
+  setStatus("Sistema restaurado. A pasta local do dataset foi mantida.", "success");
 });
 
 window.addEventListener("beforeunload", revokeUrls);
 updateControls();
+restoreDatasetHandle();
