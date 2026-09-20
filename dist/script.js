@@ -287,6 +287,8 @@ elements.xrayCanvas.addEventListener("pointerup", event => {
   }
   pushHistory();
   state.boxes.push(box);
+  const reportPrefix = elements.reportText.value.trimEnd();
+  elements.reportText.value = `${reportPrefix}\nBB${state.boxes.length}: comente ...`;
   redrawXray();
   updateControls();
   setStatus(`Bounding box ${state.boxes.length} criada e equalizada.`, "success");
@@ -366,11 +368,11 @@ elements.report.addEventListener("click", async () => {
     const index = state.items[state.currentPosition].index;
     const reportHandle = await reportsDirectory.getFileHandle(`Relatorio${index}.txt`, { create: true });
     const boundingBoxes = state.boxes
-      .map(box => `<${box.x},${box.y},${box.width},${box.height}>`)
+      .map((box, position) => `BB${position + 1}: <${box.x},${box.y},${box.width},${box.height}>`)
       .join("\n");
     const visibleReport = elements.reportText.value.trimEnd();
     const savedReport = boundingBoxes
-      ? `${visibleReport}\n${boundingBoxes}`
+      ? `${visibleReport}\n\nCoordenadas dos BBs:\n${boundingBoxes}`
       : visibleReport;
     const writable = await reportHandle.createWritable();
     await writable.write(savedReport);
