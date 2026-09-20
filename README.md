@@ -72,3 +72,5 @@ O JavaScript também cria essa caixa automaticamente caso o navegador ainda este
 Com uma imagem carregada, clique com o botão direito dentro de qualquer BB na imagem de Raio-X ou HEMD. O sistema abre uma janela independente contendo somente aquela região. A janela pode ser redimensionada, e o recorte é escalonado proporcionalmente para ocupar o espaço disponível.
 
 Dentro da janela independente, posicione o cursor sobre o recorte e use a roda do mouse para aumentar ou diminuir o zoom. O ponto sob o cursor é usado como referência da ampliação. Um clique duplo restaura o zoom para 100%.
+
+Para examinar áreas que ficaram fora da janela após a ampliação, mantenha o botão direito do mouse pressionado sobre o recorte e arraste a imagem para a esquerda, direita, para cima ou para baixo. O menu de contexto é desativado somente dentro da área do recorte. O clique duplo também restaura a posição central da imagem.
