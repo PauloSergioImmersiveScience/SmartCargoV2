@@ -136,6 +136,12 @@ function findNextPendingPosition(afterPosition = -1) {
   return -1;
 }
 
+function finishPendingQueue() {
+  window.alert("Não existem mais imagens pendentes para análise. O sistema retornará ao início.");
+  clearDisplayedState(false);
+  setStatus("Todas as imagens foram analisadas. Sistema restaurado ao estado inicial.", "success");
+}
+
 function openHandleDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(HANDLE_DB_NAME, 1);
@@ -486,7 +492,7 @@ elements.upload.addEventListener("click", async () => {
         ? selectedPosition
         : findNextPendingPosition(-1);
       if (initialPosition < 0) {
-        setStatus("Todas as imagens da pasta já foram analisadas.", "success");
+        finishPendingQueue();
         return;
       }
       pushHistory();
@@ -502,7 +508,7 @@ elements.upload.addEventListener("click", async () => {
     }
     const position = selectedPosition >= 0 ? selectedPosition : findNextPendingPosition(state.currentPosition);
     if (position < 0) {
-      setStatus("Todas as imagens da pasta já foram analisadas.", "success");
+      finishPendingQueue();
       return;
     }
     pushHistory();
@@ -601,7 +607,7 @@ elements.report.addEventListener("click", async () => {
         setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado, mas a próxima imagem não pôde ser carregada: ${nextError.message}`, "error");
       }
     } else {
-      setStatus(`Relatorio${index}.txt salvo e ${PROGRESS_FILE_NAME} atualizado. Todas as imagens foram analisadas.`, "success");
+      finishPendingQueue();
     }
   } catch (error) {
     setStatus(`Não foi possível salvar o relatório: ${error.message}`, "error");
