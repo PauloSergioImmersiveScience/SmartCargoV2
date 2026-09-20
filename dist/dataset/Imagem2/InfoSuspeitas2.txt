@@ -1,0 +1,9 @@
+nro_container: DFSU7570082
+suspeito: Sim
+des_conteudo: CHEIO
+ncm_nota: 39231090
+mercadoria_nf: Outros
+ncm_mercadoria_manifestada: 39231090
+mercadoria_manifestada: Outros
+UUID\PASTA: event-009ee1c7-a6e3-46e8-a5ea-57396c76f970
+Data/Imagem: 20260206-0550
