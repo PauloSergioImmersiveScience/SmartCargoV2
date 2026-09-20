@@ -16,6 +16,8 @@ const ACCESS_PASSWORD = "123456";
 
 Esta verificação ocorre no navegador e serve apenas como uma barreira simples de acesso; ela não substitui autenticação segura realizada por um servidor.
 
+A versão 6 força explicitamente o fechamento da tela de login pelo atributo `hidden` e pela propriedade CSS `display`, evitando que a regra visual da tela bloqueie a abertura da aplicação após a senha correta.
+
 ## Navegadores compatíveis
 
 Use uma versão atual do Google Chrome ou Microsoft Edge. A aplicação utiliza a File System Access API para ler e gravar na pasta escolhida pelo usuário.
