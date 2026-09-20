@@ -41,7 +41,9 @@ O arquivo `InfoSuspeitas<índice>.txt` pode utilizar `:` ou `=` para separar cha
 
 O arquivo `count-images.txt` é criado automaticamente na pasta principal e guarda, com um índice por linha, as imagens cujos relatórios já foram salvos. A pasta do dataset é escolhida pelo campo no cabeçalho e sua autorização é armazenada localmente pelo navegador. Por segurança, o navegador não expõe nem reabre pastas por um caminho Windows digitado; por isso o campo mostra o nome da pasta e pode ser clicado para escolher ou reautorizar o local.
 
-O botão **UpLoad Images** abre a seleção de uma imagem específica. Se o usuário escolher `xray<índice>.png` ou `hemd<índice>.png`, o conjunto correspondente é carregado. Se cancelar a janela, o sistema carrega a próxima imagem pendente, ignorando os índices presentes em `count-images.txt`.
+Enquanto nenhuma imagem está carregada, o botão **UpLoad Images** permite escolher `xray<índice>.png` ou `hemd<índice>.png` de uma imagem já analisada. Se a janela for cancelada, o sistema carrega a próxima imagem pendente, ignorando os índices presentes em `count-images.txt`. Depois que uma imagem é carregada, a seleção manual fica desativada e o botão passa a carregar somente a próxima pendente.
+
+Se a pasta ainda não estiver configurada e o usuário clicar em **UpLoad Images**, o sistema solicita primeiro a pasta principal, salva a autorização no navegador e apresenta uma escolha temporária entre reavaliação e próxima pendente. O navegador não permite deduzir automaticamente a pasta-pai a partir de um arquivo isolado.
 
 ## Execução local
 
@@ -59,4 +61,4 @@ O projeto inclui um workflow de publicação. Crie um repositório, envie todos 
 
 ## Relatórios
 
-Ao clicar em **Gerar Relatório**, a aplicação cria a pasta `Relatorios` dentro da pasta principal indicada no cabeçalho. Somente o arquivo `Relatorio<índice>.txt` correspondente à carga atual é criado ou substituído; os demais relatórios são preservados. Depois da gravação, o mesmo índice é incluído em `count-images.txt`.
+Ao clicar em **Gerar Relatório**, a aplicação cria a pasta `Relatorios` dentro da pasta principal indicada no cabeçalho. Somente o arquivo `Relatorio<índice>.txt` correspondente à carga atual é criado ou substituído; os demais relatórios são preservados. Depois da gravação, o mesmo índice é incluído em `count-images.txt` e a próxima imagem pendente é carregada automaticamente.
