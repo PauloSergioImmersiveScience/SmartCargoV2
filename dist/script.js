@@ -25,7 +25,7 @@ const elements = {
 
 elements.loginForm.addEventListener("submit", event => {
   event.preventDefault();
-  if (elements.passwordInput.value !== ACCESS_PASSWORD) {
+  if (elements.passwordInput.value.trim() !== ACCESS_PASSWORD) {
     elements.loginError.textContent = "Senha incorreta. Tente novamente.";
     elements.passwordInput.value = "";
     elements.passwordInput.focus();
@@ -33,7 +33,10 @@ elements.loginForm.addEventListener("submit", event => {
   }
   elements.loginError.textContent = "";
   elements.loginScreen.hidden = true;
+  elements.loginScreen.style.display = "none";
   elements.appShell.hidden = false;
+  elements.appShell.style.display = "block";
+  elements.passwordInput.value = "";
 });
 
 const ctx = elements.xrayCanvas.getContext("2d", { willReadFrequently: true });
