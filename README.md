@@ -4,6 +4,8 @@ Interface web para leitura sequencial de imagens de raio X e HEMD, criação de 
 
 As coordenadas das bounding boxes não são exibidas no campo de edição do relatório. Elas são acrescentadas somente ao arquivo `Relatorio<índice>.txt` no momento da gravação. Após salvar, a interface mostra uma caixa de aviso nativa do navegador com o local do arquivo gerado. Os arquivos CSS e JavaScript usam identificação de versão para impedir que o navegador mantenha a implementação anterior em cache.
 
+Para cada caixa criada, o campo visível recebe uma linha de comentário no formato `BB1: comente ...`, `BB2: comente ...` e assim sucessivamente. Somente o relatório salvo contém a seção `Coordenadas dos BBs`, associando cada índice às suas coordenadas numéricas.
+
 ## Navegadores compatíveis
 
 Use uma versão atual do Google Chrome ou Microsoft Edge. A aplicação utiliza a File System Access API para ler e gravar na pasta escolhida pelo usuário.
