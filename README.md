@@ -75,6 +75,8 @@ Dentro da janela independente, posicione o cursor sobre o recorte e use a roda d
 
 Para examinar áreas que ficaram fora da janela após a ampliação, mantenha o botão esquerdo do mouse pressionado sobre o recorte e arraste a imagem para a esquerda, direita, para cima ou para baixo. O clique duplo também restaura a posição central da imagem.
 
-O botão **Equalizar a vista**, localizado no topo da janela independente, aplica uma equalização de histograma somente à região que estiver aparecendo naquele momento, considerando o zoom e o deslocamento realizados. A região equalizada é incorporada à imagem completa, que continua disponível para zoom e arraste. O botão pode ser usado repetidamente para criar várias subequalizações, inclusive sobre áreas sobrepostas.
+O botão **Equalização**, localizado no topo da janela independente, ativa temporariamente o modo de seleção. Nesse modo, o botão esquerdo deixa de arrastar a imagem e passa a desenhar uma nova caixa sobre a região desejada. Ao soltar o botão, somente a área dessa caixa recebe a equalização de histograma, e o botão esquerdo retorna automaticamente ao modo de arraste.
+
+A região equalizada é incorporada à imagem completa, que continua disponível para zoom e deslocamento. O processo pode ser repetido para criar várias subequalizações, inclusive sobre áreas sobrepostas. Clicar novamente em **Equalização** antes de desenhar cancela o modo de seleção.
 
 O botão **Desfazer equalização** remove somente a última subequalização e retorna ao estado imediatamente anterior, preservando as demais. Ele pode ser acionado sucessivamente até restaurar todas as equalizações locais realizadas naquela janela.
