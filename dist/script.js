@@ -568,8 +568,11 @@ function openBoxPreview(boxIndex, source) {
     button { border: 1px solid #60a5fa; border-radius: 8px; padding: 8px 12px; background: #2563eb; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
     button:hover { background: #1d4ed8; }
     button:disabled { border-color: #475569; background: #334155; color: #94a3b8; cursor: not-allowed; }
-    .preview { min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; outline: none; touch-action: none; }
+    button.active { border-color: #facc15; background: #b45309; }
+    .preview { position: relative; min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; outline: none; touch-action: none; }
     img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; transform: scale(1); transform-origin: center; user-select: none; -webkit-user-drag: none; }
+    .local-selection { position: absolute; z-index: 2; border: 2px solid #facc15; background: rgba(250, 204, 21, 0.14); pointer-events: none; }
+    .local-selection[hidden] { display: none; }
   </style>
 </head>
 <body>
@@ -578,10 +581,13 @@ function openBoxPreview(boxIndex, source) {
     <div class="header-actions">
       <span id="zoomStatus">Zoom: 100% · roda: zoom · botão esquerdo: arrastar</span>
       <button id="undoEqualization" type="button" disabled>Desfazer equalização</button>
-      <button id="equalizeVisible" type="button">Equalizar a vista</button>
+      <button id="equalizeVisible" type="button">Equalização</button>
     </div>
   </header>
-  <div class="preview" tabindex="0"><img src="${imageUrl}" alt="Ampliação do BB${boxIndex + 1}" draggable="false"></div>
+  <div class="preview" tabindex="0">
+    <img src="${imageUrl}" alt="Ampliação do BB${boxIndex + 1}" draggable="false">
+    <div id="localSelection" class="local-selection" hidden></div>
+  </div>
 </body>
 </html>`);
   popup.document.close();
@@ -590,6 +596,7 @@ function openBoxPreview(boxIndex, source) {
   const zoomStatus = popup.document.querySelector("#zoomStatus");
   const equalizeVisibleButton = popup.document.querySelector("#equalizeVisible");
   const undoEqualizationButton = popup.document.querySelector("#undoEqualization");
+  const localSelection = popup.document.querySelector("#localSelection");
   const previewContext = preview.getContext("2d", { willReadFrequently: true });
   const equalizationHistory = [];
   let zoom = 1;
@@ -600,10 +607,87 @@ function openBoxPreview(boxIndex, source) {
   let dragStartY = 0;
   let panStartX = 0;
   let panStartY = 0;
+  let equalizationMode = false;
+  let selectingEqualization = false;
+  let selectionStartX = 0;
+  let selectionStartY = 0;
+  let selectionCurrentX = 0;
+  let selectionCurrentY = 0;
 
   const updatePreviewTransform = () => {
     previewImage.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
     zoomStatus.textContent = `Zoom: ${Math.round(zoom * 100)}% · equalizações: ${equalizationHistory.length}`;
+  };
+
+  const setEqualizationMode = active => {
+    equalizationMode = active;
+    selectingEqualization = false;
+    localSelection.hidden = true;
+    equalizeVisibleButton.classList.toggle("active", active);
+    equalizeVisibleButton.textContent = active ? "Desenhe a área" : "Equalização";
+    previewArea.style.cursor = active ? "crosshair" : "grab";
+    if (active) zoomStatus.textContent = "Desenhe a caixa que será equalizada";
+    else updatePreviewTransform();
+  };
+
+  const clampedPreviewPoint = event => {
+    const rect = previewArea.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(rect.width, event.clientX - rect.left)),
+      y: Math.max(0, Math.min(rect.height, event.clientY - rect.top))
+    };
+  };
+
+  const updateLocalSelection = () => {
+    const left = Math.min(selectionStartX, selectionCurrentX);
+    const top = Math.min(selectionStartY, selectionCurrentY);
+    localSelection.style.left = `${left}px`;
+    localSelection.style.top = `${top}px`;
+    localSelection.style.width = `${Math.abs(selectionCurrentX - selectionStartX)}px`;
+    localSelection.style.height = `${Math.abs(selectionCurrentY - selectionStartY)}px`;
+  };
+
+  const applyLocalEqualization = selectionRect => {
+    const elementRect = previewImage.getBoundingClientRect();
+    const sourceAspect = preview.width / preview.height;
+    const elementAspect = elementRect.width / elementRect.height;
+    let contentWidth;
+    let contentHeight;
+
+    if (elementAspect > sourceAspect) {
+      contentHeight = elementRect.height;
+      contentWidth = contentHeight * sourceAspect;
+    } else {
+      contentWidth = elementRect.width;
+      contentHeight = contentWidth / sourceAspect;
+    }
+
+    const contentLeft = elementRect.left + (elementRect.width - contentWidth) / 2;
+    const contentTop = elementRect.top + (elementRect.height - contentHeight) / 2;
+    const visibleLeft = Math.max(selectionRect.left, contentLeft);
+    const visibleTop = Math.max(selectionRect.top, contentTop);
+    const visibleRight = Math.min(selectionRect.right, contentLeft + contentWidth);
+    const visibleBottom = Math.min(selectionRect.bottom, contentTop + contentHeight);
+
+    if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) {
+      popup.alert("A caixa precisa conter uma parte visível da imagem.");
+      return false;
+    }
+
+    const sourceX = Math.max(0, Math.floor((visibleLeft - contentLeft) * preview.width / contentWidth));
+    const sourceY = Math.max(0, Math.floor((visibleTop - contentTop) * preview.height / contentHeight));
+    const sourceRight = Math.min(preview.width, Math.ceil((visibleRight - contentLeft) * preview.width / contentWidth));
+    const sourceBottom = Math.min(preview.height, Math.ceil((visibleBottom - contentTop) * preview.height / contentHeight));
+    const sourceWidth = Math.max(1, sourceRight - sourceX);
+    const sourceHeight = Math.max(1, sourceBottom - sourceY);
+    const previousPixels = previewContext.getImageData(sourceX, sourceY, sourceWidth, sourceHeight);
+    const equalizedPixels = previewContext.createImageData(previousPixels.width, previousPixels.height);
+    equalizedPixels.data.set(previousPixels.data);
+    equalizationHistory.push({ x: sourceX, y: sourceY, pixels: previousPixels });
+    previewContext.putImageData(equalizeRegion(equalizedPixels), sourceX, sourceY);
+    previewImage.src = preview.toDataURL("image/png");
+    undoEqualizationButton.disabled = false;
+    return true;
   };
 
   previewArea.addEventListener("click", () => previewArea.focus());
@@ -621,6 +705,18 @@ function openBoxPreview(boxIndex, source) {
   previewArea.addEventListener("pointerdown", event => {
     if (event.button !== 0) return;
     event.preventDefault();
+    if (equalizationMode) {
+      const point = clampedPreviewPoint(event);
+      selectingEqualization = true;
+      selectionStartX = point.x;
+      selectionStartY = point.y;
+      selectionCurrentX = point.x;
+      selectionCurrentY = point.y;
+      localSelection.hidden = false;
+      updateLocalSelection();
+      previewArea.setPointerCapture(event.pointerId);
+      return;
+    }
     panning = true;
     dragStartX = event.clientX;
     dragStartY = event.clientY;
@@ -631,6 +727,13 @@ function openBoxPreview(boxIndex, source) {
   });
 
   previewArea.addEventListener("pointermove", event => {
+    if (selectingEqualization) {
+      const point = clampedPreviewPoint(event);
+      selectionCurrentX = point.x;
+      selectionCurrentY = point.y;
+      updateLocalSelection();
+      return;
+    }
     if (!panning) return;
     panX = panStartX + event.clientX - dragStartX;
     panY = panStartY + event.clientY - dragStartY;
@@ -638,6 +741,26 @@ function openBoxPreview(boxIndex, source) {
   });
 
   const finishPanning = event => {
+    if (selectingEqualization) {
+      const point = clampedPreviewPoint(event);
+      selectionCurrentX = point.x;
+      selectionCurrentY = point.y;
+      updateLocalSelection();
+      selectingEqualization = false;
+      localSelection.hidden = true;
+      const previewRect = previewArea.getBoundingClientRect();
+      const left = previewRect.left + Math.min(selectionStartX, selectionCurrentX);
+      const top = previewRect.top + Math.min(selectionStartY, selectionCurrentY);
+      const right = previewRect.left + Math.max(selectionStartX, selectionCurrentX);
+      const bottom = previewRect.top + Math.max(selectionStartY, selectionCurrentY);
+      if (right - left >= 3 && bottom - top >= 3 && applyLocalEqualization({ left, top, right, bottom })) {
+        setEqualizationMode(false);
+      }
+      if (event.pointerId !== undefined && previewArea.hasPointerCapture(event.pointerId)) {
+        previewArea.releasePointerCapture(event.pointerId);
+      }
+      return;
+    }
     if (!panning) return;
     panning = false;
     previewArea.style.cursor = "grab";
@@ -650,7 +773,7 @@ function openBoxPreview(boxIndex, source) {
   previewArea.addEventListener("pointercancel", finishPanning);
   previewArea.addEventListener("lostpointercapture", () => {
     panning = false;
-    previewArea.style.cursor = "grab";
+    if (!selectingEqualization) previewArea.style.cursor = equalizationMode ? "crosshair" : "grab";
   });
 
   previewArea.addEventListener("dblclick", () => {
@@ -662,49 +785,7 @@ function openBoxPreview(boxIndex, source) {
     updatePreviewTransform();
   });
 
-  equalizeVisibleButton.addEventListener("click", () => {
-    const viewportRect = previewArea.getBoundingClientRect();
-    const elementRect = previewImage.getBoundingClientRect();
-    const sourceAspect = preview.width / preview.height;
-    const elementAspect = elementRect.width / elementRect.height;
-    let contentWidth;
-    let contentHeight;
-
-    if (elementAspect > sourceAspect) {
-      contentHeight = elementRect.height;
-      contentWidth = contentHeight * sourceAspect;
-    } else {
-      contentWidth = elementRect.width;
-      contentHeight = contentWidth / sourceAspect;
-    }
-
-    const contentLeft = elementRect.left + (elementRect.width - contentWidth) / 2;
-    const contentTop = elementRect.top + (elementRect.height - contentHeight) / 2;
-    const visibleLeft = Math.max(viewportRect.left, contentLeft);
-    const visibleTop = Math.max(viewportRect.top, contentTop);
-    const visibleRight = Math.min(viewportRect.right, contentLeft + contentWidth);
-    const visibleBottom = Math.min(viewportRect.bottom, contentTop + contentHeight);
-
-    if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) {
-      popup.alert("A imagem está fora da área visível. Arraste-a novamente para dentro da janela.");
-      return;
-    }
-
-    const sourceX = Math.max(0, Math.floor((visibleLeft - contentLeft) * preview.width / contentWidth));
-    const sourceY = Math.max(0, Math.floor((visibleTop - contentTop) * preview.height / contentHeight));
-    const sourceRight = Math.min(preview.width, Math.ceil((visibleRight - contentLeft) * preview.width / contentWidth));
-    const sourceBottom = Math.min(preview.height, Math.ceil((visibleBottom - contentTop) * preview.height / contentHeight));
-    const sourceWidth = Math.max(1, sourceRight - sourceX);
-    const sourceHeight = Math.max(1, sourceBottom - sourceY);
-    const previousPixels = previewContext.getImageData(sourceX, sourceY, sourceWidth, sourceHeight);
-    const equalizedPixels = previewContext.createImageData(previousPixels.width, previousPixels.height);
-    equalizedPixels.data.set(previousPixels.data);
-    equalizationHistory.push({ x: sourceX, y: sourceY, pixels: previousPixels });
-    previewContext.putImageData(equalizeRegion(equalizedPixels), sourceX, sourceY);
-    previewImage.src = preview.toDataURL("image/png");
-    undoEqualizationButton.disabled = false;
-    zoomStatus.textContent = `Zoom: ${Math.round(zoom * 100)}% · equalizações: ${equalizationHistory.length}`;
-  });
+  equalizeVisibleButton.addEventListener("click", () => setEqualizationMode(!equalizationMode));
 
   undoEqualizationButton.addEventListener("click", () => {
     const lastEqualization = equalizationHistory.pop();
