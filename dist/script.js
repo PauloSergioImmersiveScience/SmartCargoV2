@@ -1,14 +1,6 @@
 "use strict";
 
-// Altere somente o valor entre aspas para trocar a senha de acesso.
-const ACCESS_PASSWORD = "123456";
-
 const elements = {
-  loginScreen: document.querySelector("#loginScreen"),
-  loginForm: document.querySelector("#loginForm"),
-  passwordInput: document.querySelector("#passwordInput"),
-  loginError: document.querySelector("#loginError"),
-  appShell: document.querySelector("#appShell"),
   upload: document.querySelector("#uploadButton"),
   undo: document.querySelector("#undoButton"),
   reset: document.querySelector("#resetButton"),
@@ -22,22 +14,6 @@ const elements = {
   hemdPlaceholder: document.querySelector("#hemdPlaceholder"),
   dialog: document.querySelector("#confirmDialog")
 };
-
-elements.loginForm.addEventListener("submit", event => {
-  event.preventDefault();
-  if (elements.passwordInput.value.trim() !== ACCESS_PASSWORD) {
-    elements.loginError.textContent = "Senha incorreta. Tente novamente.";
-    elements.passwordInput.value = "";
-    elements.passwordInput.focus();
-    return;
-  }
-  elements.loginError.textContent = "";
-  elements.loginScreen.hidden = true;
-  elements.loginScreen.style.display = "none";
-  elements.appShell.hidden = false;
-  elements.appShell.style.display = "block";
-  elements.passwordInput.value = "";
-});
 
 const ctx = elements.xrayCanvas.getContext("2d", { willReadFrequently: true });
 const hemdCtx = elements.hemdCanvas.getContext("2d");

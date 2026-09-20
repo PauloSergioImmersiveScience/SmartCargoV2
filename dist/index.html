@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Interface SmartScanCargo para análise de imagens de raio X e HEMD.">
   <title>SmartScanCargo</title>
-  <link rel="stylesheet" href="style.css?v=20260920-6">
+  <link rel="stylesheet" href="style.css?v=20260920-7">
 </head>
 <body>
   <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
@@ -13,7 +13,12 @@
       <img src="assets/logo-smartscargo.jpeg" alt="SmartScanCargo - Intelligent Vision for Logistics" class="login-logo">
       <p id="loginTitle" class="login-subtitle">IA X-ray Cargo Analysis</p>
       <label for="passwordInput">Access password</label>
-      <input id="passwordInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="numeric password" required autofocus>
+      <div class="password-wrapper">
+        <input id="passwordInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="numeric password" required autofocus>
+        <button id="togglePassword" class="toggle-password" type="button" aria-label="Exibir senha" aria-pressed="false" title="Exibir senha">
+          <span aria-hidden="true">👁</span>
+        </button>
+      </div>
       <p id="loginError" class="login-error" role="alert" aria-live="assertive"></p>
       <button type="submit" class="login-button">Entrar</button>
     </form>
@@ -71,6 +76,45 @@
     </form>
   </dialog>
 
-  <script src="script.js?v=20260920-6"></script>
+  <script>
+    (() => {
+      // PARA ALTERAR A SENHA, MODIFIQUE SOMENTE O VALOR ENTRE ASPAS:
+      const ACCESS_PASSWORD = "123456";
+
+      const loginScreen = document.querySelector("#loginScreen");
+      const loginForm = document.querySelector("#loginForm");
+      const passwordInput = document.querySelector("#passwordInput");
+      const loginError = document.querySelector("#loginError");
+      const appShell = document.querySelector("#appShell");
+      const togglePassword = document.querySelector("#togglePassword");
+
+      togglePassword.addEventListener("click", () => {
+        const showPassword = passwordInput.type === "password";
+        passwordInput.type = showPassword ? "text" : "password";
+        togglePassword.setAttribute("aria-pressed", String(showPassword));
+        togglePassword.setAttribute("aria-label", showPassword ? "Ocultar senha" : "Exibir senha");
+        togglePassword.title = showPassword ? "Ocultar senha" : "Exibir senha";
+        passwordInput.focus();
+      });
+
+      loginForm.addEventListener("submit", event => {
+        event.preventDefault();
+        if (passwordInput.value.trim() !== ACCESS_PASSWORD) {
+          loginError.textContent = "Senha incorreta. Tente novamente.";
+          passwordInput.focus();
+          passwordInput.select();
+          return;
+        }
+
+        loginError.textContent = "";
+        loginScreen.style.display = "none";
+        loginScreen.hidden = true;
+        appShell.hidden = false;
+        appShell.style.display = "block";
+        passwordInput.value = "";
+      });
+    })();
+  </script>
+  <script src="script.js?v=20260920-7"></script>
 </body>
 </html>
