@@ -64,3 +64,9 @@ O projeto inclui um workflow de publicação. Crie um repositório, envie todos 
 Ao clicar em **Gerar Relatório**, a aplicação cria a pasta `Relatorios` dentro da pasta principal indicada no cabeçalho. Somente o arquivo `Relatorio<índice>.txt` correspondente à carga atual é criado ou substituído; os demais relatórios são preservados. Depois da gravação, o mesmo índice é incluído em `count-images.txt` e a próxima imagem pendente é carregada automaticamente.
 
 As mensagens de relatório salvo e de conclusão são exibidas em caixas modais com o mesmo padrão visual de **Restaurar Início**. Quando não existem mais imagens pendentes, a caixa avisa o usuário e, após a confirmação, a interface retorna automaticamente ao estado inicial, preservando a pasta do dataset configurada.
+
+O JavaScript também cria essa caixa automaticamente caso o navegador ainda esteja usando uma versão anterior do `index.html`, evitando que uma atualização parcial interrompa o fluxo depois da gravação do relatório.
+
+## Ampliação dos bounding boxes
+
+Com uma imagem carregada, clique com o botão direito dentro de qualquer BB na imagem de Raio-X ou HEMD. O sistema abre uma janela independente contendo somente aquela região. A janela pode ser redimensionada, e o recorte é escalonado proporcionalmente para ocupar o espaço disponível.
