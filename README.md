@@ -39,6 +39,10 @@ cargas/
 
 O arquivo `InfoSuspeitas<índice>.txt` pode utilizar `:` ou `=` para separar chaves e valores. São lidos os campos `suspeito`, `mercadoria_nf`, `des_conteudo` e `mercadoria_manifestada`.
 
+O arquivo `count-images.txt` é criado automaticamente na pasta principal e guarda, com um índice por linha, as imagens cujos relatórios já foram salvos. A pasta do dataset é escolhida pelo campo no cabeçalho e sua autorização é armazenada localmente pelo navegador. Por segurança, o navegador não expõe nem reabre pastas por um caminho Windows digitado; por isso o campo mostra o nome da pasta e pode ser clicado para escolher ou reautorizar o local.
+
+O botão **UpLoad Images** abre a seleção de uma imagem específica. Se o usuário escolher `xray<índice>.png` ou `hemd<índice>.png`, o conjunto correspondente é carregado. Se cancelar a janela, o sistema carrega a próxima imagem pendente, ignorando os índices presentes em `count-images.txt`.
+
 ## Execução local
 
 Por segurança do navegador, execute o projeto por um servidor local. No diretório do projeto:
@@ -55,4 +59,4 @@ O projeto inclui um workflow de publicação. Crie um repositório, envie todos 
 
 ## Relatórios
 
-O botão **UpLoad Images** solicita a seleção da pasta principal local e carrega a primeira imagem. Ao clicar em **Gerar Relatório**, a aplicação cria a pasta `Relatorios` dentro da pasta principal selecionada. Somente o arquivo `Relatorio<índice>.txt` correspondente à carga atual é criado ou substituído; os demais relatórios são preservados.
+Ao clicar em **Gerar Relatório**, a aplicação cria a pasta `Relatorios` dentro da pasta principal indicada no cabeçalho. Somente o arquivo `Relatorio<índice>.txt` correspondente à carga atual é criado ou substituído; os demais relatórios são preservados. Depois da gravação, o mesmo índice é incluído em `count-images.txt`.
