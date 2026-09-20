@@ -1,9 +1,0 @@
-nro_container: TCLU8700919
-suspeito: Sim
-des_conteudo: CHEIO
-ncm_nota: 94036000
-mercadoria_nf: Outros Moveis de Madeira
-ncm_mercadoria_manifestada: 8423
-mercadoria_manifestada: Aparelhos e instrumentos de pesagem, incluindo as báscuLAS EBALANÇAS PARA VERIFICAR PEÇAS USINADAS (FABRICADAS*), EXCLUI
-UUID\PASTA: event-00ac43e6-53f8-41b3-b00c-d25890929d01
-Data/Imagem: 20260213-0177
