@@ -564,19 +564,44 @@ function openBoxPreview(boxIndex, source) {
     body { display: grid; grid-template-rows: auto 1fr; color: #fff; font-family: "Segoe UI", sans-serif; }
     header { padding: 10px 16px; background: #111827; font-weight: 700; display: flex; gap: 16px; align-items: center; justify-content: space-between; }
     header span { color: #cbd5e1; font-size: 13px; font-weight: 400; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    button { border: 1px solid #60a5fa; border-radius: 8px; padding: 8px 12px; background: #2563eb; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
     .preview { min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; outline: none; touch-action: none; }
     img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; transform: scale(1); transform-origin: center; user-select: none; -webkit-user-drag: none; }
+    .equalized-overlay { position: fixed; inset: 0; z-index: 10; padding: 24px; display: grid; grid-template-rows: auto 1fr; gap: 12px; background: rgba(3, 7, 18, 0.96); }
+    .equalized-overlay[hidden] { display: none; }
+    .equalized-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .equalized-result { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .equalized-result img { width: 100%; height: 100%; object-fit: contain; transform: none; }
   </style>
 </head>
 <body>
-  <header><strong>BB${boxIndex + 1} — ${sourceLabel}</strong><span id="zoomStatus">Zoom: 100% · roda: zoom · botão esquerdo: arrastar</span></header>
+  <header>
+    <strong>BB${boxIndex + 1} — ${sourceLabel}</strong>
+    <div class="header-actions">
+      <span id="zoomStatus">Zoom: 100% · roda: zoom · botão esquerdo: arrastar</span>
+      <button id="equalizeVisible" type="button">Equalizar área visível</button>
+    </div>
+  </header>
   <div class="preview" tabindex="0"><img src="${imageUrl}" alt="Ampliação do BB${boxIndex + 1}" draggable="false"></div>
+  <section id="equalizedOverlay" class="equalized-overlay" hidden>
+    <div class="equalized-toolbar">
+      <strong>Área visível equalizada — BB${boxIndex + 1}</strong>
+      <button id="closeEqualized" type="button">Fechar</button>
+    </div>
+    <div class="equalized-result"><img id="equalizedImage" alt="Área visível com equalização de histograma"></div>
+  </section>
 </body>
 </html>`);
   popup.document.close();
   const previewArea = popup.document.querySelector(".preview");
   const previewImage = popup.document.querySelector("img");
   const zoomStatus = popup.document.querySelector("#zoomStatus");
+  const equalizeVisibleButton = popup.document.querySelector("#equalizeVisible");
+  const equalizedOverlay = popup.document.querySelector("#equalizedOverlay");
+  const equalizedImage = popup.document.querySelector("#equalizedImage");
+  const closeEqualizedButton = popup.document.querySelector("#closeEqualized");
   let zoom = 1;
   let panX = 0;
   let panY = 0;
@@ -645,6 +670,56 @@ function openBoxPreview(boxIndex, source) {
     previewImage.style.transformOrigin = "center";
     previewArea.style.cursor = "grab";
     updatePreviewTransform();
+  });
+
+  equalizeVisibleButton.addEventListener("click", () => {
+    const viewportRect = previewArea.getBoundingClientRect();
+    const elementRect = previewImage.getBoundingClientRect();
+    const sourceAspect = preview.width / preview.height;
+    const elementAspect = elementRect.width / elementRect.height;
+    let contentWidth;
+    let contentHeight;
+
+    if (elementAspect > sourceAspect) {
+      contentHeight = elementRect.height;
+      contentWidth = contentHeight * sourceAspect;
+    } else {
+      contentWidth = elementRect.width;
+      contentHeight = contentWidth / sourceAspect;
+    }
+
+    const contentLeft = elementRect.left + (elementRect.width - contentWidth) / 2;
+    const contentTop = elementRect.top + (elementRect.height - contentHeight) / 2;
+    const visibleLeft = Math.max(viewportRect.left, contentLeft);
+    const visibleTop = Math.max(viewportRect.top, contentTop);
+    const visibleRight = Math.min(viewportRect.right, contentLeft + contentWidth);
+    const visibleBottom = Math.min(viewportRect.bottom, contentTop + contentHeight);
+
+    if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) {
+      popup.alert("A imagem está fora da área visível. Arraste-a novamente para dentro da janela.");
+      return;
+    }
+
+    const sourceX = Math.max(0, Math.floor((visibleLeft - contentLeft) * preview.width / contentWidth));
+    const sourceY = Math.max(0, Math.floor((visibleTop - contentTop) * preview.height / contentHeight));
+    const sourceRight = Math.min(preview.width, Math.ceil((visibleRight - contentLeft) * preview.width / contentWidth));
+    const sourceBottom = Math.min(preview.height, Math.ceil((visibleBottom - contentTop) * preview.height / contentHeight));
+    const sourceWidth = Math.max(1, sourceRight - sourceX);
+    const sourceHeight = Math.max(1, sourceBottom - sourceY);
+    const resultCanvas = popup.document.createElement("canvas");
+    resultCanvas.width = sourceWidth;
+    resultCanvas.height = sourceHeight;
+    const resultContext = resultCanvas.getContext("2d", { willReadFrequently: true });
+    resultContext.drawImage(preview, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+    const visibleImageData = resultContext.getImageData(0, 0, sourceWidth, sourceHeight);
+    resultContext.putImageData(equalizeRegion(visibleImageData), 0, 0);
+    equalizedImage.src = resultCanvas.toDataURL("image/png");
+    equalizedOverlay.hidden = false;
+  });
+
+  closeEqualizedButton.addEventListener("click", () => {
+    equalizedOverlay.hidden = true;
+    previewArea.focus();
   });
   popup.focus();
   previewArea.focus();
