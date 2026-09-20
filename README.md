@@ -62,3 +62,5 @@ O projeto inclui um workflow de publicação. Crie um repositório, envie todos 
 ## Relatórios
 
 Ao clicar em **Gerar Relatório**, a aplicação cria a pasta `Relatorios` dentro da pasta principal indicada no cabeçalho. Somente o arquivo `Relatorio<índice>.txt` correspondente à carga atual é criado ou substituído; os demais relatórios são preservados. Depois da gravação, o mesmo índice é incluído em `count-images.txt` e a próxima imagem pendente é carregada automaticamente.
+
+Quando não existem mais imagens pendentes, uma janela avisa o usuário e a interface retorna automaticamente ao estado inicial, preservando a pasta do dataset configurada.
