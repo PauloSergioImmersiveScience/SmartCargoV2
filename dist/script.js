@@ -859,7 +859,9 @@ elements.xrayCanvas.addEventListener("pointerup", event => {
 
 elements.upload.addEventListener("click", async () => {
   try {
-    if (!state.rootHandle) {
+    // No estado inicial, o usuário sempre pode escolher um novo dataset.
+    // Isso evita que o botão fique preso ao diretório salvo anteriormente.
+    if (state.currentPosition < 0) {
       await chooseAndActivateDataset();
       const selectedPosition = await askInitialChoice();
       const initialPosition = selectedPosition >= 0
@@ -873,23 +875,13 @@ elements.upload.addEventListener("click", async () => {
       await loadItem(initialPosition);
       return;
     }
-    let selectedPosition = -1;
-    if (state.currentPosition < 0) {
-      if (!("showOpenFilePicker" in window)) {
-        throw new Error("Este navegador não permite selecionar arquivos. Abra o sistema no Chrome ou Edge atualizado.");
-      }
-      selectedPosition = await chooseSpecificImagePosition(true);
-    }
-    const position = selectedPosition >= 0 ? selectedPosition : findNextPendingPosition(state.currentPosition);
+    const position = findNextPendingPosition(state.currentPosition);
     if (position < 0) {
       await finishPendingQueue();
       return;
     }
     pushHistory();
     await loadItem(position);
-    if (selectedPosition >= 0) {
-      setStatus(`Imagem${state.items[position].index} carregada para reavaliação.`, "success");
-    }
   } catch (error) {
     if (error.name === "AbortError") return;
     setStatus(error.message, "error");
@@ -898,13 +890,7 @@ elements.upload.addEventListener("click", async () => {
 
 elements.datasetPath.addEventListener("click", async () => {
   try {
-    if (!state.rootHandle && state.savedRootHandle) {
-      const permission = await state.savedRootHandle.requestPermission({ mode: "readwrite" });
-      if (permission === "granted") {
-        await activateDataset(state.savedRootHandle);
-        return;
-      }
-    }
+    // O clique no campo sempre abre o seletor, permitindo trocar o dataset.
     await chooseAndActivateDataset();
   } catch (error) {
     if (error.name === "AbortError") return;
