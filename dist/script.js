@@ -176,7 +176,7 @@ async function finishPendingQueue() {
     "Análise concluída",
     "Não existem mais imagens pendentes para análise. O sistema retornará ao início."
   );
-  clearDisplayedState(false);
+  clearDisplayedState(true);
   setStatus("Todas as imagens foram analisadas. Sistema restaurado ao estado inicial.", "success");
 }
 
@@ -281,7 +281,10 @@ async function chooseAndActivateDataset() {
   }
   const handle = await window.showDirectoryPicker({
     mode: "readwrite",
-    startIn: state.rootHandle || state.savedRootHandle || "documents"
+    // Os navegadores não permitem apontar diretamente para C:\\.
+    // "documents" abre uma localização geral do Windows, de onde o usuário
+    // pode acessar Este Computador e selecionar C:, D: ou outro disco.
+    startIn: "documents"
   });
   const permission = await handle.requestPermission({ mode: "readwrite" });
   if (permission !== "granted") throw new Error("A permissão de leitura e gravação não foi concedida.");
@@ -996,8 +999,11 @@ function clearDisplayedState(clearFolder = true) {
   state.reportBeforeEdit = null;
   if (clearFolder) {
     state.rootHandle = null;
+    state.savedRootHandle = null;
     state.items = [];
     state.completedIndices = new Set();
+    elements.datasetPath.value = "";
+    elements.datasetPath.classList.remove("selected");
   }
   ctx.clearRect(0, 0, elements.xrayCanvas.width, elements.xrayCanvas.height);
   hemdCtx.clearRect(0, 0, elements.hemdCanvas.width, elements.hemdCanvas.height);
@@ -1012,10 +1018,10 @@ function clearDisplayedState(clearFolder = true) {
 elements.reset.addEventListener("click", () => elements.dialog.showModal());
 elements.dialog.addEventListener("close", () => {
   if (elements.dialog.returnValue !== "confirm") return;
-  clearDisplayedState(false);
-  setStatus("Sistema restaurado. A pasta local do dataset foi mantida.", "success");
+  clearDisplayedState(true);
+  setStatus("Sistema restaurado. Selecione novamente a pasta do dataset.", "success");
 });
 
 window.addEventListener("beforeunload", revokeUrls);
 updateControls();
-restoreDatasetHandle();
+setStatus("Selecione a pasta principal para começar.");
